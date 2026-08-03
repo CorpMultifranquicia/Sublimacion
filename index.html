@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubliApp - Sistema de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex h-screen overflow-hidden">
+
+    <!-- MENÚ LATERAL -->
+    <aside class="w-64 bg-white shadow-xl flex flex-col justify-between z-20 relative">
+        <div>
+            <div class="h-20 flex items-center justify-center border-b border-slate-100">
+                <h1 class="text-2xl font-bold text-indigo-600 tracking-tight">
+                    <i class="fa-solid fa-layer-group mr-2"></i>SubliApp
+                </h1>
+            </div>
+            <nav class="mt-4 px-4 space-y-1 overflow-y-auto h-[calc(100vh-160px)]">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4 px-2">Principal</p>
+                <button id="link-inicio" onclick="App.showTab('inicio')" class="nav-link w-full flex items-center px-4 py-2.5 bg-indigo-50 text-indigo-700 font-medium rounded-lg transition-colors">
+                    <i class="fa-solid fa-chart-pie w-6 text-left"></i> Inicio
+                </button>
+                <button id="link-ventas" onclick="App.showTab('ventas')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-cart-shopping w-6 text-left"></i> Ventas
+                </button>
+                <button id="link-produccion" onclick="App.showTab('produccion')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-clipboard-check w-6 text-left"></i> Producción
+                </button>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6 px-2">Catálogo</p>
+                <button id="link-productos" onclick="App.showTab('productos')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-tags w-6 text-left"></i> Prod. y Precios
+                </button>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6 px-2">Administración</p>
+                <button id="link-inventario" onclick="App.showTab('inventario')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-boxes-stacked w-6 text-left"></i> Inventario
+                </button>
+                <button id="link-compras" onclick="App.showTab('compras')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bag-shopping w-6 text-left"></i> Compras
+                </button>
+                <button id="link-clientes" onclick="App.showTab('clientes')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-users w-6 text-left"></i> Clientes (CRM)
+                </button>
+                <button id="link-reportes" onclick="App.showTab('reportes')" class="nav-link w-full flex items-center px-4 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors">
+                    <i class="fa-solid fa-chart-line w-6 text-left"></i> Reportes
+                </button>
+            </nav>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md">MS</div>
+                <div>
+                    <p class="text-sm font-bold text-slate-700">Master User</p>
+                    <p class="text-xs text-slate-400">Administrador</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10">
+            <div>
+                <h2 id="header-title" class="text-2xl font-bold text-slate-800">Resumen del Mes</h2>
+                <p id="header-subtitle" class="text-sm text-slate-500 mt-1">Vista general de tu negocio</p>
+            </div>
+            <div class="flex gap-3" id="header-actions"></div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8">
+
+            <!-- 1. INICIO -->
+            <div id="tab-inicio" class="tab-content block animation-fade">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50 flex items-center justify-between group hover:border-indigo-100 transition-colors">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Ingresos (Mes)</p>
+                            <p id="kpi-ingresos" class="text-3xl font-bold text-slate-800">$0.00</p>
+                        </div>
+                        <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl group-hover:bg-emerald-100 transition-colors"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50 flex items-center justify-between group hover:border-indigo-100 transition-colors">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Gastos (Mes)</p>
+                            <p id="kpi-gastos" class="text-3xl font-bold text-slate-800">$0.00</p>
+                        </div>
+                        <div class="w-14 h-14 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-2xl group-hover:bg-rose-100 transition-colors"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50 flex items-center justify-between group hover:border-indigo-100 transition-colors">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Órdenes Activas</p>
+                            <p id="kpi-ordenes" class="text-3xl font-bold text-slate-800">0</p>
+                        </div>
+                        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-2xl group-hover:bg-blue-100 transition-colors"><i class="fa-solid fa-clipboard-list"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50 flex items-center justify-between group hover:border-rose-100 transition-colors">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Alertas Stock</p>
+                            <p id="kpi-alertas" class="text-3xl font-bold text-rose-600">0</p>
+                        </div>
+                        <div class="w-14 h-14 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-2xl group-hover:bg-orange-100 transition-colors"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 p-6 lg:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-slate-800">Ventas Más Recientes</h3>
+                            <button class="text-sm text-indigo-600 font-medium hover:text-indigo-800" onclick="App.showTab('ventas')">Ver todas</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b-2 border-slate-100 text-xs uppercase text-slate-400 font-semibold tracking-wider">
+                                        <th class="pb-3">Cliente</th><th class="pb-3">Producto</th><th class="pb-3">Estado</th><th class="pb-3 text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbl-ventas-recientes" class="text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-slate-800">Atención Requerida</h3>
+                            <button class="text-sm text-indigo-600 font-medium hover:text-indigo-800" onclick="App.showTab('inventario')">Ver Stock</button>
+                        </div>
+                        <ul id="list-atencion" class="space-y-4"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. VENTAS -->
+            <div id="tab-ventas" class="tab-content hidden animation-fade">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">ID Venta</th><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Cliente</th>
+                                <th class="px-6 py-4">Detalle</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Monto</th><th class="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl-ventas" class="text-sm divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. PRODUCCIÓN (KANBAN) -->
+            <div id="tab-produccion" class="tab-content hidden animation-fade h-full">
+                <div class="flex gap-6 h-full overflow-x-auto pb-4" id="kanban-board"></div>
+            </div>
+
+            <!-- 4. PRODUCTOS Y RECETAS -->
+            <div id="tab-productos" class="tab-content hidden animation-fade">
+                <div class="mb-6 flex gap-2 bg-slate-100 p-1 rounded-lg w-fit">
+                    <button onclick="App.toggleProdView('lista')" id="btn-view-lista" class="px-4 py-2 text-sm font-bold bg-white text-indigo-600 shadow-sm rounded-md transition-all">
+                        <i class="fa-solid fa-list mr-2"></i>Lista de Precios Rápida
+                    </button>
+                    <button onclick="App.toggleProdView('recetas')" id="btn-view-recetas" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 rounded-md transition-all">
+                        <i class="fa-solid fa-flask mr-2"></i>Detalle de Recetas y Márgenes
+                    </button>
+                </div>
+
+                <div id="view-lista" class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-indigo-50/50 border-b border-indigo-100 text-xs uppercase text-indigo-800 font-bold">
+                            <tr>
+                                <th class="px-6 py-4">Producto Final</th><th class="px-6 py-4">Categoría</th>
+                                <th class="px-6 py-4 text-right">Costo Producción</th><th class="px-6 py-4 text-right">Precio de Venta</th>
+                                <th class="px-6 py-4 text-right">Ganancia Neta</th><th class="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl-productos-lista" class="text-sm divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+
+                <div id="view-recetas" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8"></div>
+            </div>
+
+            <!-- 5. INVENTARIO -->
+            <div id="tab-inventario" class="tab-content hidden animation-fade">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div class="flex gap-2" id="filtro-inventario">
+                            <button data-cat="Todos" class="filtro-cat bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">Todos</button>
+                            <button data-cat="Consumible" class="filtro-cat bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium">Consumibles</button>
+                            <button data-cat="Sustrato" class="filtro-cat bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium">Sustratos</button>
+                        </div>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Insumo</th><th class="px-6 py-4">Categoría</th><th class="px-6 py-4">Stock Actual</th>
+                                <th class="px-6 py-4">Stock Mínimo</th><th class="px-6 py-4 text-center">Estado</th>
+                                <th class="px-6 py-4 text-right">Costo Unitario</th><th class="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl-inventario" class="text-sm divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 6. COMPRAS -->
+            <div id="tab-compras" class="tab-content hidden animation-fade">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 p-6 lg:col-span-1 h-fit">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Ingresar Compra</h3>
+                        <form id="form-compra" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Proveedor</label>
+                                <input name="proveedor" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500" placeholder="Ej: ColorMake">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                                <input name="fecha" type="date" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
+                                <p class="text-sm text-slate-500 text-center mb-3">Insumos de la compra</p>
+                                <ul id="items-compra" class="text-xs text-slate-600 space-y-2 mb-3"></ul>
+                                <button type="button" onclick="App.addItemCompra()" class="w-full py-2 bg-white border border-slate-200 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-50 transition-colors">
+                                    <i class="fa-solid fa-plus mr-1"></i> Añadir Insumo
+                                </button>
+                            </div>
+                            <div class="pt-4 border-t border-slate-100">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="font-bold text-slate-700">Total Compra:</span>
+                                    <span id="total-compra" class="text-xl font-black text-slate-800">$0.00</span>
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-colors">Registrar Compra</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden lg:col-span-2 h-fit">
+                        <div class="p-6 border-b border-slate-100"><h3 class="text-lg font-bold text-slate-800">Historial de Compras</h3></div>
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                                <tr><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Proveedor</th><th class="px-6 py-4">Detalle</th><th class="px-6 py-4 text-right">Total</th></tr>
+                            </thead>
+                            <tbody id="tbl-compras" class="text-sm divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. CLIENTES -->
+            <div id="tab-clientes" class="tab-content hidden animation-fade">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Directorio de Clientes</h3>
+                        <div class="relative w-64">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="buscar-cliente" type="text" placeholder="Buscar cliente..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
+                        </div>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                            <tr><th class="px-6 py-4">Nombre / Empresa</th><th class="px-6 py-4">Contacto</th><th class="px-6 py-4">Fechas Especiales</th><th class="px-6 py-4 text-center">Total Comprado</th><th class="px-6 py-4"></th></tr>
+                        </thead>
+                        <tbody id="tbl-clientes" class="text-sm divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 8. REPORTES -->
+            <div id="tab-reportes" class="tab-content hidden animation-fade">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-slate-800">Ingresos vs Gastos (Últimos 6 meses)</h3>
+                        </div>
+                        <div id="chart-ingresos-gastos" class="flex items-end justify-between h-48 mt-4 border-b border-slate-200 pb-2 relative"></div>
+                        <div class="flex justify-center gap-6 mt-4 text-xs font-medium text-slate-600">
+                            <span class="flex items-center gap-2"><div class="w-3 h-3 bg-indigo-500 rounded-sm"></div> Ingresos</span>
+                            <span class="flex items-center gap-2"><div class="w-3 h-3 bg-rose-400 rounded-sm"></div> Gastos (Compras)</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50">
+                        <h3 class="font-bold text-slate-800 mb-6">Productos Más Vendidos (Mes Actual)</h3>
+                        <div id="ranking-productos" class="space-y-6"></div>
+                        <div class="mt-8 pt-6 border-t border-slate-100">
+                            <h4 class="text-sm font-bold text-slate-700 mb-4 uppercase">Top Mejores Clientes</h4>
+                            <ul id="ranking-clientes" class="space-y-3"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL GENÉRICO -->
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div id="modal-panel" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg animation-fade"></div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
