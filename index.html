@@ -37,10 +37,13 @@
     </div>
 
     <!-- APP -->
-    <div id="app-shell" class="hidden h-screen w-full flex">
+    <div id="app-shell" class="hidden h-screen w-full flex relative">
+
+    <!-- OVERLAY MÓVIL -->
+    <div id="sidebar-overlay" onclick="App.toggleSidebar(false)" class="hidden fixed inset-0 bg-slate-900/40 z-20 md:hidden"></div>
 
     <!-- MENÚ LATERAL -->
-    <aside class="w-64 bg-white shadow-xl flex flex-col justify-between z-20 relative">
+    <aside id="sidebar" class="w-64 bg-white shadow-xl flex flex-col justify-between z-30 fixed md:relative inset-y-0 left-0 -translate-x-full md:translate-x-0 transition-transform duration-200">
         <div>
             <div class="h-20 flex items-center justify-center border-b border-slate-100">
                 <h1 class="text-2xl font-bold text-indigo-600 tracking-tight">
@@ -90,15 +93,20 @@
 
     <!-- ÁREA DE CONTENIDO -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
-        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10">
-            <div>
-                <h2 id="header-title" class="text-2xl font-bold text-slate-800">Resumen del Mes</h2>
-                <p id="header-subtitle" class="text-sm text-slate-500 mt-1">Vista general de tu negocio</p>
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between gap-3 px-4 sm:px-8 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="App.toggleSidebar()" class="md:hidden text-slate-500 hover:text-indigo-600 text-xl shrink-0">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="min-w-0">
+                    <h2 id="header-title" class="text-lg sm:text-2xl font-bold text-slate-800 truncate">Resumen del Mes</h2>
+                    <p id="header-subtitle" class="text-xs sm:text-sm text-slate-500 mt-1 truncate hidden sm:block">Vista general de tu negocio</p>
+                </div>
             </div>
-            <div class="flex gap-3" id="header-actions"></div>
+            <div class="flex gap-2 sm:gap-3 shrink-0" id="header-actions"></div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8">
 
             <!-- 1. INICIO -->
             <div id="tab-inicio" class="tab-content block animation-fade">
@@ -164,15 +172,24 @@
             <!-- 2. VENTAS -->
             <div id="tab-ventas" class="tab-content hidden animation-fade">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                            <tr>
-                                <th class="px-6 py-4">ID Venta</th><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Cliente</th>
-                                <th class="px-6 py-4">Detalle</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Monto</th><th class="px-6 py-4"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-ventas" class="text-sm divide-y divide-slate-50"></tbody>
-                    </table>
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="buscar-venta" type="text" placeholder="Buscar por cliente o folio..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-6 py-4">ID Venta</th><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Cliente</th>
+                                    <th class="px-6 py-4">Detalle</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Monto</th><th class="px-6 py-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-ventas" class="text-sm divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                    <div id="paginacion-ventas"></div>
                 </div>
             </div>
 
@@ -193,16 +210,25 @@
                 </div>
 
                 <div id="view-lista" class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-indigo-50/50 border-b border-indigo-100 text-xs uppercase text-indigo-800 font-bold">
-                            <tr>
-                                <th class="px-6 py-4">Producto Final</th><th class="px-6 py-4">Categoría</th>
-                                <th class="px-6 py-4 text-right">Costo Producción</th><th class="px-6 py-4 text-right">Precio de Venta</th>
-                                <th class="px-6 py-4 text-right">Ganancia Neta</th><th class="px-6 py-4"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-productos-lista" class="text-sm divide-y divide-slate-50"></tbody>
-                    </table>
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="buscar-producto" type="text" placeholder="Buscar producto..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-indigo-50/50 border-b border-indigo-100 text-xs uppercase text-indigo-800 font-bold">
+                                <tr>
+                                    <th class="px-6 py-4">Producto Final</th><th class="px-6 py-4">Categoría</th>
+                                    <th class="px-6 py-4 text-right">Costo Producción</th><th class="px-6 py-4 text-right">Precio de Venta</th>
+                                    <th class="px-6 py-4 text-right">Ganancia Neta</th><th class="px-6 py-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-productos-lista" class="text-sm divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                    <div id="paginacion-productos"></div>
                 </div>
 
                 <div id="view-recetas" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8"></div>
@@ -211,23 +237,30 @@
             <!-- 5. INVENTARIO -->
             <div id="tab-inventario" class="tab-content hidden animation-fade">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
-                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <div class="flex gap-2" id="filtro-inventario">
+                    <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-slate-50/50">
+                        <div class="flex gap-2 flex-wrap" id="filtro-inventario">
                             <button data-cat="Todos" class="filtro-cat bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">Todos</button>
                             <button data-cat="Consumible" class="filtro-cat bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium">Consumibles</button>
                             <button data-cat="Sustrato" class="filtro-cat bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium">Sustratos</button>
                         </div>
+                        <div class="relative w-full sm:w-64">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="buscar-insumo" type="text" placeholder="Buscar insumo..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
+                        </div>
                     </div>
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                            <tr>
-                                <th class="px-6 py-4">Insumo</th><th class="px-6 py-4">Categoría</th><th class="px-6 py-4">Stock Actual</th>
-                                <th class="px-6 py-4">Stock Mínimo</th><th class="px-6 py-4 text-center">Estado</th>
-                                <th class="px-6 py-4 text-right">Costo Unitario</th><th class="px-6 py-4"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-inventario" class="text-sm divide-y divide-slate-50"></tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-6 py-4">Insumo</th><th class="px-6 py-4">Categoría</th><th class="px-6 py-4">Stock Actual</th>
+                                    <th class="px-6 py-4">Stock Mínimo</th><th class="px-6 py-4 text-center">Estado</th>
+                                    <th class="px-6 py-4 text-right">Costo Unitario</th><th class="px-6 py-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-inventario" class="text-sm divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                    <div id="paginacion-inventario"></div>
                 </div>
             </div>
 
@@ -263,13 +296,22 @@
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden lg:col-span-2 h-fit">
-                        <div class="p-6 border-b border-slate-100"><h3 class="text-lg font-bold text-slate-800">Historial de Compras</h3></div>
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                                <tr><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Proveedor</th><th class="px-6 py-4">Detalle</th><th class="px-6 py-4 text-right">Total</th></tr>
-                            </thead>
-                            <tbody id="tbl-compras" class="text-sm divide-y divide-slate-50"></tbody>
-                        </table>
+                        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                            <h3 class="text-lg font-bold text-slate-800">Historial de Compras</h3>
+                            <div class="relative w-full sm:w-64">
+                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="buscar-compra" type="text" placeholder="Buscar proveedor..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50/50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                                    <tr><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Proveedor</th><th class="px-6 py-4">Detalle</th><th class="px-6 py-4 text-right">Total</th></tr>
+                                </thead>
+                                <tbody id="tbl-compras" class="text-sm divide-y divide-slate-50"></tbody>
+                            </table>
+                        </div>
+                        <div id="paginacion-compras"></div>
                     </div>
                 </div>
             </div>
@@ -277,19 +319,22 @@
             <!-- 7. CLIENTES -->
             <div id="tab-clientes" class="tab-content hidden animation-fade">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100/50 overflow-hidden">
-                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                         <h3 class="font-bold text-slate-800">Directorio de Clientes</h3>
-                        <div class="relative w-64">
+                        <div class="relative w-full sm:w-64">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                             <input id="buscar-cliente" type="text" placeholder="Buscar cliente..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm">
                         </div>
                     </div>
-                    <table class="w-full text-left">
-                        <thead class="bg-white border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                            <tr><th class="px-6 py-4">Nombre / Empresa</th><th class="px-6 py-4">Contacto</th><th class="px-6 py-4">Fechas Especiales</th><th class="px-6 py-4 text-center">Total Comprado</th><th class="px-6 py-4"></th></tr>
-                        </thead>
-                        <tbody id="tbl-clientes" class="text-sm divide-y divide-slate-50"></tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-white border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
+                                <tr><th class="px-6 py-4">Nombre / Empresa</th><th class="px-6 py-4">Contacto</th><th class="px-6 py-4">Fechas Especiales</th><th class="px-6 py-4 text-center">Total Comprado</th><th class="px-6 py-4"></th></tr>
+                            </thead>
+                            <tbody id="tbl-clientes" class="text-sm divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                    <div id="paginacion-clientes"></div>
                 </div>
             </div>
 

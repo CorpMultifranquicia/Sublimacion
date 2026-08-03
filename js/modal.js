@@ -25,10 +25,23 @@ export function openModal(title, bodyHtml, onSubmit) {
     overlay.classList.remove('hidden');
     panel.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeModal));
     const form = panel.querySelector('#modal-form');
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = new FormData(form);
-        onSubmit(data, form);
+        const btn = panel.querySelector('button[type="submit"]');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>Guardando...`;
+        try {
+            await onSubmit(data, form);
+        } finally {
+            if (document.body.contains(btn)) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                btn.innerHTML = originalHtml;
+            }
+        }
     });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); }, { once: true });
 }

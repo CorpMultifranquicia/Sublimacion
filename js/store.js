@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabaseClient.js';
+import { compressImage } from './imageUtils.js';
 
 let state = {
     insumos: [],
@@ -212,8 +213,9 @@ async function addAdjuntoEnlace(ventaId, url, nombre) {
 }
 
 async function addAdjuntoImagen(ventaId, file) {
-    const path = `${ventaId}/${crypto.randomUUID()}-${file.name}`;
-    const upload = await supabase.storage.from('adjuntos').upload(path, file);
+    const comprimido = await compressImage(file);
+    const path = `${ventaId}/${crypto.randomUUID()}-${comprimido.name}`;
+    const upload = await supabase.storage.from('adjuntos').upload(path, comprimido);
     if (upload.error) throw upload.error;
     const { data: { publicUrl } } = supabase.storage.from('adjuntos').getPublicUrl(path);
     must(await supabase.from('venta_adjuntos').insert({ venta_id: ventaId, tipo: 'imagen', url: publicUrl, nombre: file.name }));

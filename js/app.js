@@ -40,8 +40,49 @@ const ESTADO_STOCK_BADGE = {
 
 let inventarioFiltro = 'Todos';
 let clientesQuery = '';
+let ventasQuery = '';
+let productosQuery = '';
+let comprasQuery = '';
+let inventarioQuery = '';
+
+const PAGE_SIZE = 8;
+const pageState = { ventas: 1, inventario: 1, productos: 1, compras: 1, clientes: 1 };
+
+function paginar(lista, key) {
+    const totalPages = Math.max(1, Math.ceil(lista.length / PAGE_SIZE));
+    pageState[key] = Math.min(Math.max(1, pageState[key]), totalPages);
+    const start = (pageState[key] - 1) * PAGE_SIZE;
+    return { items: lista.slice(start, start + PAGE_SIZE), totalPages, total: lista.length };
+}
+
+function paginacionHtml(key, totalPages, total) {
+    const el = document.getElementById('paginacion-' + key);
+    if (!el) return;
+    if (total === 0) { el.innerHTML = ''; return; }
+    const page = pageState[key];
+    el.innerHTML = `<div class="flex justify-between items-center px-6 py-3 border-t border-slate-100 text-xs text-slate-500">
+        <span>${total} resultado${total !== 1 ? 's' : ''} · página ${page} de ${totalPages}</span>
+        <div class="flex gap-2">
+            <button ${page <= 1 ? 'disabled' : ''} onclick="App.cambiarPagina('${key}', ${page - 1})" class="px-3 py-1 rounded border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50">Anterior</button>
+            <button ${page >= totalPages ? 'disabled' : ''} onclick="App.cambiarPagina('${key}', ${page + 1})" class="px-3 py-1 rounded border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50">Siguiente</button>
+        </div>
+    </div>`;
+}
+
+function cambiarPagina(key, page) {
+    pageState[key] = page;
+    renderAll();
+}
 
 // ---------------- Navegación ----------------
+
+function toggleSidebar(force) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const open = force !== undefined ? force : sidebar.classList.contains('-translate-x-full');
+    sidebar.classList.toggle('-translate-x-full', !open);
+    overlay.classList.toggle('hidden', !open);
+}
 
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => { el.classList.add('hidden'); el.classList.remove('block'); });
@@ -61,11 +102,12 @@ function showTab(tabId) {
     const actionsEl = document.getElementById('header-actions');
     actionsEl.innerHTML = data.actions.map(a => {
         const cls = a.variant === 'secondary'
-            ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2'
-            : 'bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md shadow-indigo-200 transition-all flex items-center gap-2';
-        return `<button onclick="App.${a.fn}()" class="${cls}"><i class="fa-solid ${a.icon}"></i> ${a.text}</button>`;
+            ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2'
+            : 'bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-5 py-2.5 rounded-lg font-medium shadow-md shadow-indigo-200 transition-all flex items-center gap-2';
+        return `<button onclick="App.${a.fn}()" class="${cls}"><i class="fa-solid ${a.icon}"></i> <span class="hidden sm:inline">${a.text}</span></button>`;
     }).join('');
 
+    toggleSidebar(false);
     renderAll();
 }
 
@@ -146,7 +188,15 @@ function detalleTexto(venta) {
 // ---------------- Ventas ----------------
 
 function renderVentas() {
-    const rows = [...Store.state.ventas].sort((a, b) => b.folio - a.folio).map(v => {
+    const q = ventasQuery.toLowerCase();
+    const todas = [...Store.state.ventas].sort((a, b) => b.folio - a.folio).filter(v => {
+        if (!q) return true;
+        const cliente = Store.state.clientes.find(c => c.id === v.cliente_id);
+        return `ven-${folioTxt(v.folio)}`.includes(q) || (cliente && cliente.nombre.toLowerCase().includes(q));
+    });
+    const { items, totalPages, total } = paginar(todas, 'ventas');
+
+    const rows = items.map(v => {
         const cliente = Store.state.clientes.find(c => c.id === v.cliente_id);
         return `<tr class="hover:bg-slate-50 transition-colors">
             <td class="px-6 py-4 font-mono font-medium text-indigo-600">#VEN-${folioTxt(v.folio)}</td>
@@ -167,6 +217,7 @@ function renderVentas() {
         </tr>`;
     }).join('');
     document.getElementById('tbl-ventas').innerHTML = rows || `<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin ventas registradas</td></tr>`;
+    paginacionHtml('ventas', totalPages, total);
 }
 
 function descargarRecibo(ventaId) {
@@ -253,6 +304,7 @@ function openAdjuntosModal(ventaId) {
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Subir imagen</label>
                 <input id="input-adjunto-imagen" type="file" accept="image/*" class="w-full text-sm">
+                <p class="text-xs text-slate-400 mt-1">Máx. 8MB. Se comprime automáticamente antes de subir.</p>
             </div>
             <div class="flex gap-2 items-end">
                 <div class="flex-1">
@@ -321,7 +373,11 @@ function openAdjuntosModal(ventaId) {
 // ---------------- Productos ----------------
 
 function renderProductos() {
-    document.getElementById('tbl-productos-lista').innerHTML = Store.state.productos.map(p => {
+    const q = productosQuery.toLowerCase();
+    const filtrados = Store.state.productos.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
+    const { items, totalPages, total } = paginar(filtrados, 'productos');
+
+    document.getElementById('tbl-productos-lista').innerHTML = items.map(p => {
         const costo = Store.costoProduccion(p);
         const ganancia = Store.gananciaNeta(p);
         return `<tr class="hover:bg-slate-50 transition-colors">
@@ -336,8 +392,9 @@ function renderProductos() {
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="6" class="py-8 text-center text-slate-400">Sin productos aún</td></tr>`;
+    paginacionHtml('productos', totalPages, total);
 
-    document.getElementById('view-recetas').innerHTML = Store.state.productos.map(p => {
+    document.getElementById('view-recetas').innerHTML = filtrados.map(p => {
         const costo = Store.costoProduccion(p);
         const margen = Store.margenPct(p);
         const ganancia = Store.gananciaNeta(p);
@@ -471,8 +528,14 @@ function renderInventario() {
             : 'filtro-cat bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium';
     });
 
-    const insumos = Store.state.insumos.filter(i => inventarioFiltro === 'Todos' || i.categoria === inventarioFiltro);
-    document.getElementById('tbl-inventario').innerHTML = insumos.map(i => {
+    const q = inventarioQuery.toLowerCase();
+    const insumos = Store.state.insumos.filter(i =>
+        (inventarioFiltro === 'Todos' || i.categoria === inventarioFiltro) &&
+        (!q || i.nombre.toLowerCase().includes(q))
+    );
+    const { items, totalPages, total } = paginar(insumos, 'inventario');
+
+    document.getElementById('tbl-inventario').innerHTML = items.map(i => {
         const est = Store.estadoStock(i);
         return `<tr class="hover:bg-slate-50 transition-colors">
             <td class="px-6 py-4 font-medium text-slate-800">${i.nombre}</td>
@@ -487,6 +550,7 @@ function renderInventario() {
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin insumos en esta categoría</td></tr>`;
+    paginacionHtml('inventario', totalPages, total);
 }
 
 function eliminarInsumo(id) {
@@ -497,6 +561,7 @@ function eliminarInsumo(id) {
 
 function filtrarInventario(cat) {
     inventarioFiltro = cat;
+    pageState.inventario = 1;
     renderInventario();
 }
 
@@ -545,7 +610,12 @@ function openInsumoModal(id) {
 let itemsCompra = [];
 
 function renderCompras() {
-    document.getElementById('tbl-compras').innerHTML = [...Store.state.compras].sort((a, b) => b.fecha.localeCompare(a.fecha)).map(c => {
+    const q = comprasQuery.toLowerCase();
+    const todas = [...Store.state.compras].sort((a, b) => b.fecha.localeCompare(a.fecha))
+        .filter(c => !q || c.proveedor.toLowerCase().includes(q));
+    const { items, totalPages, total } = paginar(todas, 'compras');
+
+    document.getElementById('tbl-compras').innerHTML = items.map(c => {
         const detalle = c.items.map(it => {
             const insumo = Store.state.insumos.find(i => i.id === it.insumo_id);
             return `${it.cantidad}x ${insumo ? insumo.nombre : '—'}`;
@@ -557,6 +627,7 @@ function renderCompras() {
             <td class="px-6 py-4 text-right font-bold text-slate-700">${fmt(Store.montoCompra(c))}</td>
         </tr>`;
     }).join('') || `<tr><td colspan="4" class="py-8 text-center text-slate-400">Sin compras registradas</td></tr>`;
+    paginacionHtml('compras', totalPages, total);
     renderItemsCompra();
 }
 
@@ -608,20 +679,32 @@ document.getElementById('form-compra').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (itemsCompra.length === 0) { alert('Añade al menos un insumo a la compra.'); return; }
     const formData = new FormData(e.target);
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('opacity-60', 'cursor-not-allowed');
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>Registrando...`;
     try {
         await Store.addCompra({ proveedor: formData.get('proveedor'), fecha: formData.get('fecha'), items: itemsCompra });
         itemsCompra = [];
         e.target.reset();
         renderAll();
-    } catch (err) { handleError(err); }
+    } catch (err) {
+        handleError(err);
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
+        btn.innerHTML = originalHtml;
+    }
 });
 
 // ---------------- Clientes ----------------
 
 function renderClientes() {
     const q = clientesQuery.toLowerCase();
-    const clientes = Store.state.clientes.filter(c => c.nombre.toLowerCase().includes(q));
-    document.getElementById('tbl-clientes').innerHTML = clientes.map(c => {
+    const filtrados = Store.state.clientes.filter(c => c.nombre.toLowerCase().includes(q));
+    const { items, totalPages, total: totalResultados } = paginar(filtrados, 'clientes');
+    document.getElementById('tbl-clientes').innerHTML = items.map(c => {
         const { total, ordenes } = Store.totalCompradoCliente(c.id);
         const fechaHtml = c.fecha_especial
             ? `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium"><i class="fa-solid fa-cake-candles mr-1"></i> ${c.fecha_especial} (${c.tipo_fecha || 'Especial'})</span>
@@ -638,6 +721,7 @@ function renderClientes() {
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="5" class="py-8 text-center text-slate-400">Sin clientes</td></tr>`;
+    paginacionHtml('clientes', totalPages, totalResultados);
 }
 
 function eliminarCliente(id) {
@@ -719,7 +803,11 @@ function openClienteModal(id) {
     });
 }
 
-document.getElementById('buscar-cliente').addEventListener('input', (e) => { clientesQuery = e.target.value; renderClientes(); });
+document.getElementById('buscar-cliente').addEventListener('input', (e) => { clientesQuery = e.target.value; pageState.clientes = 1; renderClientes(); });
+document.getElementById('buscar-venta').addEventListener('input', (e) => { ventasQuery = e.target.value; pageState.ventas = 1; renderVentas(); });
+document.getElementById('buscar-producto').addEventListener('input', (e) => { productosQuery = e.target.value; pageState.productos = 1; renderProductos(); });
+document.getElementById('buscar-insumo').addEventListener('input', (e) => { inventarioQuery = e.target.value; pageState.inventario = 1; renderInventario(); });
+document.getElementById('buscar-compra').addEventListener('input', (e) => { comprasQuery = e.target.value; pageState.compras = 1; renderCompras(); });
 
 // ---------------- Venta (modal con detalle) ----------------
 
@@ -991,10 +1079,18 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
     const formData = new FormData(e.target);
     const errorEl = document.getElementById('login-error');
     errorEl.classList.add('hidden');
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('opacity-60', 'cursor-not-allowed');
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>Ingresando...`;
     const { error } = await supabase.auth.signInWithPassword({
         email: formData.get('email'),
         password: formData.get('password'),
     });
+    btn.disabled = false;
+    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+    btn.innerHTML = originalHtml;
     if (error) {
         errorEl.textContent = error.message;
         errorEl.classList.remove('hidden');
@@ -1013,7 +1109,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 // ---------------- Bootstrap ----------------
 
 window.App = {
-    showTab, toggleProdView,
+    showTab, toggleProdView, toggleSidebar, cambiarPagina,
     openInsumoModal, eliminarInsumo,
     openProductoModal, eliminarProducto,
     openClienteModal, eliminarCliente, openClienteDetalle, enviarFelicitacion,

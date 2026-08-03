@@ -50,9 +50,10 @@ python3 -m http.server 8080
 - `supabase/schema.sql` — tablas, RLS y funciones de negocio (descuento de stock al vender, costo promedio ponderado al comprar) ejecutadas atómicamente en la base de datos.
 - `js/supabaseClient.js` — inicializa el cliente de Supabase a partir de `window.__SUPABASE_CONFIG__`.
 - `js/store.js` — capa de datos: lee/escribe en Supabase y mantiene una caché local en memoria para que el resto de la app renderice de forma síncrona. Cálculos de costo/margen/ganancia son puro JS sobre esa caché.
-- `js/modal.js` — modal genérico reutilizable para formularios.
+- `js/modal.js` — modal genérico reutilizable para formularios; deshabilita el botón de guardar mientras la operación está en curso (evita duplicados por doble clic).
 - `js/pdf.js` — generación de recibos y cotizaciones en PDF (jsPDF). Edita `NEGOCIO_NOMBRE` / `NEGOCIO_CONTACTO` en este archivo con los datos reales del negocio.
-- `js/app.js` — autenticación (login/logout), renderizado de vistas y wiring de eventos.
+- `js/imageUtils.js` — comprime imágenes en el navegador antes de subirlas a Storage (máx. 1600px, JPEG calidad 80%, rechaza archivos de más de 8MB).
+- `js/app.js` — autenticación (login/logout), sidebar responsive con menú hamburguesa en móvil, búsqueda + paginación (8 filas) en Ventas/Productos/Inventario/Compras/Clientes, renderizado de vistas y wiring de eventos.
 - `scripts/build-config.js` — genera `js/config.js` desde variables de entorno en el build de Vercel.
 - `supabase/migrations/` — cambios incrementales de esquema para aplicar sobre un proyecto Supabase ya provisionado (ejecutar en orden, una sola vez cada uno).
 
