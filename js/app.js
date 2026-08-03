@@ -1,22 +1,29 @@
 import { Store } from './store.js';
 import { openModal, closeModal, confirmDialog } from './modal.js';
 import { supabase } from './supabaseClient.js';
+import { generarReciboPDF, generarCotizacionPDF } from './pdf.js';
 
 const fmt = (n) => `$${(n || 0).toFixed(2)}`;
 const panel = () => document.getElementById('modal-panel');
 const handleError = (e) => { console.error(e); alert('Ocurrió un error: ' + (e?.message || e)); };
 const folioTxt = (n) => String(n).padStart(4, '0');
-const waLink = (telefono) => `https://wa.me/${telefono.replace(/\D/g, '')}`;
+const waLink = (telefono, mensaje) => `https://wa.me/${telefono.replace(/\D/g, '')}${mensaje ? `?text=${encodeURIComponent(mensaje)}` : ''}`;
 
 const tabData = {
-    inicio: { title: 'Resumen del Mes', subtitle: 'Vista general de tu negocio', action: null },
-    ventas: { title: 'Gestión de Ventas', subtitle: 'Historial de pedidos', action: { text: 'Nueva Venta', icon: 'fa-cart-plus', fn: 'openVentaModal' } },
-    produccion: { title: 'Tablero de Producción', subtitle: 'Kanban de pedidos', action: null },
-    productos: { title: 'Catálogo y Precios', subtitle: 'Precios y recetas', action: { text: 'Nuevo Producto', icon: 'fa-tag', fn: 'openProductoModal' } },
-    inventario: { title: 'Inventario', subtitle: 'Control de stock', action: { text: 'Nuevo Insumo', icon: 'fa-plus', fn: 'openInsumoModal' } },
-    compras: { title: 'Compras', subtitle: 'Ingreso de mercancía', action: null },
-    clientes: { title: 'Directorio CRM', subtitle: 'Gestión de clientes', action: { text: 'Nuevo Cliente', icon: 'fa-user-plus', fn: 'openClienteModal' } },
-    reportes: { title: 'Reportes y Gráficos', subtitle: 'Análisis de negocio', action: null },
+    inicio: { title: 'Resumen del Mes', subtitle: 'Vista general de tu negocio', actions: [] },
+    ventas: {
+        title: 'Gestión de Ventas', subtitle: 'Historial de pedidos',
+        actions: [
+            { text: 'Nueva Cotización', icon: 'fa-file-invoice', fn: 'openCotizacionModal', variant: 'secondary' },
+            { text: 'Nueva Venta', icon: 'fa-cart-plus', fn: 'openVentaModal' },
+        ],
+    },
+    produccion: { title: 'Tablero de Producción', subtitle: 'Kanban de pedidos', actions: [] },
+    productos: { title: 'Catálogo y Precios', subtitle: 'Precios y recetas', actions: [{ text: 'Nuevo Producto', icon: 'fa-tag', fn: 'openProductoModal' }] },
+    inventario: { title: 'Inventario', subtitle: 'Control de stock', actions: [{ text: 'Nuevo Insumo', icon: 'fa-plus', fn: 'openInsumoModal' }] },
+    compras: { title: 'Compras', subtitle: 'Ingreso de mercancía', actions: [] },
+    clientes: { title: 'Directorio CRM', subtitle: 'Gestión de clientes', actions: [{ text: 'Nuevo Cliente', icon: 'fa-user-plus', fn: 'openClienteModal' }] },
+    reportes: { title: 'Reportes y Gráficos', subtitle: 'Análisis de negocio', actions: [] },
 };
 
 const ESTADO_BADGE = {
@@ -52,9 +59,12 @@ function showTab(tabId) {
     document.getElementById('header-title').innerText = data.title;
     document.getElementById('header-subtitle').innerText = data.subtitle;
     const actionsEl = document.getElementById('header-actions');
-    actionsEl.innerHTML = data.action
-        ? `<button onclick="App.${data.action.fn}()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md shadow-indigo-200 transition-all flex items-center gap-2"><i class="fa-solid ${data.action.icon}"></i> ${data.action.text}</button>`
-        : '';
+    actionsEl.innerHTML = data.actions.map(a => {
+        const cls = a.variant === 'secondary'
+            ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2'
+            : 'bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md shadow-indigo-200 transition-all flex items-center gap-2';
+        return `<button onclick="App.${a.fn}()" class="${cls}"><i class="fa-solid ${a.icon}"></i> ${a.text}</button>`;
+    }).join('');
 
     renderAll();
 }
@@ -149,10 +159,29 @@ function renderVentas() {
                 </select>
             </td>
             <td class="px-6 py-4 text-right font-bold text-slate-700">${fmt(Store.montoVenta(v))}</td>
-            <td class="px-6 py-4 text-right"><button onclick="App.eliminarVenta('${v.id}', ${v.folio})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button></td>
+            <td class="px-6 py-4 text-right whitespace-nowrap">
+                <button onclick="App.descargarRecibo('${v.id}')" title="Descargar recibo PDF" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-file-pdf"></i></button>
+                ${cliente?.telefono ? `<button onclick="App.enviarEstadoWhatsApp('${v.id}')" title="Enviar estado por WhatsApp" class="text-slate-400 hover:text-emerald-600 mr-3"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
+                <button onclick="App.eliminarVenta('${v.id}', ${v.folio})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
+            </td>
         </tr>`;
     }).join('');
     document.getElementById('tbl-ventas').innerHTML = rows || `<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin ventas registradas</td></tr>`;
+}
+
+function descargarRecibo(ventaId) {
+    const venta = Store.state.ventas.find(v => v.id === ventaId);
+    if (!venta) return;
+    const cliente = Store.state.clientes.find(c => c.id === venta.cliente_id);
+    generarReciboPDF(venta, cliente, Store.state.productos);
+}
+
+function enviarEstadoWhatsApp(ventaId) {
+    const venta = Store.state.ventas.find(v => v.id === ventaId);
+    const cliente = Store.state.clientes.find(c => c.id === venta?.cliente_id);
+    if (!venta || !cliente?.telefono) return;
+    const mensaje = `Hola ${cliente.nombre}, tu pedido #VEN-${folioTxt(venta.folio)} (${detalleTexto(venta)}) está en estado: *${venta.estado}*. Total: ${fmt(Store.montoVenta(venta))}. ¡Gracias por tu compra!`;
+    window.open(waLink(cliente.telefono, mensaje), '_blank');
 }
 
 async function cambiarEstadoVenta(id, estado) {
@@ -595,7 +624,8 @@ function renderClientes() {
     document.getElementById('tbl-clientes').innerHTML = clientes.map(c => {
         const { total, ordenes } = Store.totalCompradoCliente(c.id);
         const fechaHtml = c.fecha_especial
-            ? `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium"><i class="fa-solid fa-cake-candles mr-1"></i> ${c.fecha_especial} (${c.tipo_fecha || 'Especial'})</span>`
+            ? `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium"><i class="fa-solid fa-cake-candles mr-1"></i> ${c.fecha_especial} (${c.tipo_fecha || 'Especial'})</span>
+               ${c.telefono ? `<button onclick="App.enviarFelicitacion('${c.id}')" title="Enviar felicitación por WhatsApp" class="ml-1 text-emerald-500 hover:text-emerald-700"><i class="fa-brands fa-whatsapp"></i></button>` : ''}`
             : `<span class="text-slate-400 text-xs">Sin registrar</span>`;
         return `<tr class="hover:bg-slate-50 transition-colors">
             <td class="px-6 py-4 font-bold text-slate-700"><button onclick="App.openClienteDetalle('${c.id}')" class="hover:text-indigo-600 hover:underline text-left">${c.nombre}</button></td>
@@ -614,6 +644,14 @@ function eliminarCliente(id) {
     confirmDialog('¿Eliminar este cliente?', async () => {
         try { await Store.deleteCliente(id); renderAll(); } catch (e) { handleError(e); }
     });
+}
+
+function enviarFelicitacion(id) {
+    const cliente = Store.state.clientes.find(c => c.id === id);
+    if (!cliente?.telefono) return;
+    const motivo = (cliente.tipo_fecha || 'Fecha Especial').toLowerCase();
+    const mensaje = `¡Feliz ${motivo}, ${cliente.nombre}! 🎉 Te deseamos un excelente día de parte de todo el equipo.`;
+    window.open(waLink(cliente.telefono, mensaje), '_blank');
 }
 
 function openClienteDetalle(id) {
@@ -770,6 +808,88 @@ function openVentaModal() {
     renderDetalleRows();
 }
 
+// ---------------- Cotización (PDF, no persiste en la base de datos) ----------------
+
+let itemsCotizacion = [];
+
+function openCotizacionModal() {
+    if (Store.state.productos.length === 0) { alert('Primero crea al menos un producto.'); return; }
+    itemsCotizacion = [];
+    const body = `
+        <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cliente (opcional)</label>
+            <select name="cliente_id" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                <option value="">Sin especificar</option>
+                ${Store.state.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}
+            </select></div>
+        <div class="pt-2 border-t border-slate-100">
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase">Productos</label>
+                <button type="button" id="btn-add-cotizacion-item" class="text-xs text-indigo-600 font-medium hover:underline"><i class="fa-solid fa-plus mr-1"></i>Añadir producto</button>
+            </div>
+            <div id="cotizacion-rows" class="space-y-2"></div>
+            <p class="text-sm mt-3 text-right">Total: <span id="total-cotizacion-preview" class="font-black text-indigo-600 text-lg">$0.00</span></p>
+        </div>
+    `;
+    openModal('Nueva Cotización', body, (formData) => {
+        if (itemsCotizacion.length === 0) { alert('Añade al menos un producto.'); return; }
+        const clienteId = formData.get('cliente_id');
+        const cliente = clienteId ? Store.state.clientes.find(c => c.id === clienteId) : null;
+        const items = itemsCotizacion.map(it => {
+            const p = Store.state.productos.find(p => p.id === it.producto_id);
+            return { nombre: p ? p.nombre : 'Producto', cantidad: it.cantidad, precio_unitario: it.precio_unitario };
+        });
+        generarCotizacionPDF({ cliente, items });
+        closeModal();
+    });
+    const submitBtn = panel().querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fa-solid fa-file-pdf mr-1"></i>Generar PDF';
+
+    function renderRows() {
+        document.getElementById('cotizacion-rows').innerHTML = itemsCotizacion.map((d, idx) => `
+            <div class="cotizacion-row flex gap-2 items-center">
+                <select name="producto_id" data-idx="${idx}" class="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs">
+                    ${Store.state.productos.map(p => `<option value="${p.id}" ${p.id === d.producto_id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+                </select>
+                <input name="cantidad" data-idx="${idx}" type="number" min="1" value="${d.cantidad}" class="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs">
+                <input name="precio_unitario" data-idx="${idx}" type="number" step="0.01" min="0" value="${d.precio_unitario}" class="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-xs">
+                <button type="button" data-remove="${idx}" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('') || '<p class="text-xs text-slate-400">Sin productos añadidos</p>';
+
+        panel().querySelectorAll('.cotizacion-row select, .cotizacion-row input').forEach(el => {
+            el.addEventListener('input', () => {
+                const idx = Number(el.dataset.idx);
+                if (el.name === 'producto_id') {
+                    itemsCotizacion[idx].producto_id = el.value;
+                    const prod = Store.state.productos.find(p => p.id === el.value);
+                    if (prod) itemsCotizacion[idx].precio_unitario = prod.precio_venta;
+                    renderRows();
+                } else {
+                    itemsCotizacion[idx][el.name] = Number(el.value) || 0;
+                    updateTotal();
+                }
+            });
+        });
+        panel().querySelectorAll('[data-remove]').forEach(btn => {
+            btn.addEventListener('click', () => { itemsCotizacion.splice(Number(btn.dataset.remove), 1); renderRows(); });
+        });
+        updateTotal();
+    }
+
+    function updateTotal() {
+        const total = itemsCotizacion.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
+        const el = document.getElementById('total-cotizacion-preview');
+        if (el) el.textContent = fmt(total);
+    }
+
+    document.getElementById('btn-add-cotizacion-item').addEventListener('click', () => {
+        const first = Store.state.productos[0];
+        itemsCotizacion.push({ producto_id: first.id, cantidad: 1, precio_unitario: first.precio_venta });
+        renderRows();
+    });
+
+    renderRows();
+}
+
 // ---------------- Reportes ----------------
 
 function renderReportes() {
@@ -896,7 +1016,8 @@ window.App = {
     showTab, toggleProdView,
     openInsumoModal, eliminarInsumo,
     openProductoModal, eliminarProducto,
-    openClienteModal, eliminarCliente, openClienteDetalle,
+    openClienteModal, eliminarCliente, openClienteDetalle, enviarFelicitacion,
     openVentaModal, cambiarEstadoVenta, eliminarVenta, openAdjuntosModal,
+    descargarRecibo, enviarEstadoWhatsApp, openCotizacionModal,
     addItemCompra, logout,
 };
