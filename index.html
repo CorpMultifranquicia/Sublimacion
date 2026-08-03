@@ -9,7 +9,35 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/custom.css">
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased flex h-screen overflow-hidden">
+<body class="bg-slate-50 text-slate-800 antialiased h-screen overflow-hidden">
+
+    <!-- PANTALLA DE CARGA -->
+    <div id="loading-screen" class="h-screen w-full flex items-center justify-center bg-slate-50">
+        <i class="fa-solid fa-layer-group text-4xl text-indigo-600 animate-pulse"></i>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="auth-screen" class="hidden h-screen w-full flex items-center justify-center bg-slate-50">
+        <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-100/50 p-8">
+            <h1 class="text-2xl font-bold text-indigo-600 tracking-tight text-center mb-1"><i class="fa-solid fa-layer-group mr-2"></i>SubliApp</h1>
+            <p class="text-sm text-slate-500 text-center mb-6">Acceso de administrador</p>
+            <form id="form-login" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Correo</label>
+                    <input name="email" type="email" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña</label>
+                    <input name="password" type="password" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <p id="login-error" class="hidden text-sm text-rose-600"></p>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-colors">Iniciar Sesión</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app-shell" class="hidden h-screen w-full flex">
 
     <!-- MENÚ LATERAL -->
     <aside class="w-64 bg-white shadow-xl flex flex-col justify-between z-20 relative">
@@ -52,9 +80,9 @@
         <div class="p-4 border-t border-slate-100 bg-white">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md">MS</div>
-                <div>
-                    <p class="text-sm font-bold text-slate-700">Master User</p>
-                    <p class="text-xs text-slate-400">Administrador</p>
+                <div class="flex-1 min-w-0">
+                    <p id="user-email" class="text-sm font-bold text-slate-700 truncate">Administrador</p>
+                    <button onclick="App.logout()" class="text-xs text-slate-400 hover:text-rose-500">Cerrar sesión</button>
                 </div>
             </div>
         </div>
@@ -293,11 +321,15 @@
         </div>
     </main>
 
+    </div><!-- /#app-shell -->
+
     <!-- MODAL GENÉRICO -->
     <div id="modal-overlay" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div id="modal-panel" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg animation-fade"></div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/config.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

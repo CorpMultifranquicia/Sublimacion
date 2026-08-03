@@ -1,8 +1,11 @@
 import { Store } from './store.js';
 import { openModal, closeModal, confirmDialog } from './modal.js';
+import { supabase } from './supabaseClient.js';
 
 const fmt = (n) => `$${(n || 0).toFixed(2)}`;
 const panel = () => document.getElementById('modal-panel');
+const handleError = (e) => { console.error(e); alert('Ocurrió un error: ' + (e?.message || e)); };
+const folioTxt = (n) => String(n).padStart(4, '0');
 
 const tabData = {
     inicio: { title: 'Resumen del Mes', subtitle: 'Vista general de tu negocio', action: null },
@@ -132,34 +135,32 @@ function detalleTexto(venta) {
 // ---------------- Ventas ----------------
 
 function renderVentas() {
-    const rows = [...Store.state.ventas].sort((a, b) => b.id - a.id).map(v => {
+    const rows = [...Store.state.ventas].sort((a, b) => b.folio - a.folio).map(v => {
         const cliente = Store.state.clientes.find(c => c.id === v.cliente_id);
         return `<tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-6 py-4 font-mono font-medium text-indigo-600">#VEN-${String(v.id).padStart(4, '0')}</td>
+            <td class="px-6 py-4 font-mono font-medium text-indigo-600">#VEN-${folioTxt(v.folio)}</td>
             <td class="px-6 py-4 text-slate-500">${v.fecha}</td>
             <td class="px-6 py-4 font-medium text-slate-700">${cliente ? cliente.nombre : '—'}</td>
             <td class="px-6 py-4 text-slate-600">${detalleTexto(v)}</td>
             <td class="px-6 py-4">
-                <select onchange="App.cambiarEstadoVenta(${v.id}, this.value)" class="text-xs font-medium rounded-full px-2.5 py-1 border-0 ${ESTADO_BADGE[v.estado]}">
+                <select onchange="App.cambiarEstadoVenta('${v.id}', this.value)" class="text-xs font-medium rounded-full px-2.5 py-1 border-0 ${ESTADO_BADGE[v.estado]}">
                     ${Store.ESTADOS_PRODUCCION.map(e => `<option value="${e}" ${e === v.estado ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
             </td>
             <td class="px-6 py-4 text-right font-bold text-slate-700">${fmt(Store.montoVenta(v))}</td>
-            <td class="px-6 py-4 text-right"><button onclick="App.eliminarVenta(${v.id})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button></td>
+            <td class="px-6 py-4 text-right"><button onclick="App.eliminarVenta('${v.id}', ${v.folio})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     }).join('');
     document.getElementById('tbl-ventas').innerHTML = rows || `<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin ventas registradas</td></tr>`;
 }
 
-function cambiarEstadoVenta(id, estado) {
-    Store.updateEstadoVenta(id, estado);
-    renderAll();
+async function cambiarEstadoVenta(id, estado) {
+    try { await Store.updateEstadoVenta(id, estado); renderAll(); } catch (e) { handleError(e); }
 }
 
-function eliminarVenta(id) {
-    confirmDialog(`¿Eliminar la venta #VEN-${String(id).padStart(4, '0')}? Esta acción no se puede deshacer.`, () => {
-        Store.deleteVenta(id);
-        renderAll();
+function eliminarVenta(id, folio) {
+    confirmDialog(`¿Eliminar la venta #VEN-${folioTxt(folio)}? Esta acción no se puede deshacer.`, async () => {
+        try { await Store.deleteVenta(id); renderAll(); } catch (e) { handleError(e); }
     });
 }
 
@@ -178,7 +179,7 @@ function renderProduccion() {
                     const cliente = Store.state.clientes.find(c => c.id === v.cliente_id);
                     return `<div class="kanban-card bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:border-indigo-300 transition-colors" draggable="true" data-venta-id="${v.id}">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs font-mono text-indigo-600 font-bold">#VEN-${String(v.id).padStart(4, '0')}</span>
+                            <span class="text-xs font-mono text-indigo-600 font-bold">#VEN-${folioTxt(v.folio)}</span>
                         </div>
                         <p class="font-bold text-slate-800 text-sm mb-1">${detalleTexto(v)}</p>
                         <div class="flex justify-between items-center text-xs">
@@ -197,12 +198,11 @@ function renderProduccion() {
     board.querySelectorAll('.kanban-col').forEach(col => {
         col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
         col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-        col.addEventListener('drop', (e) => {
+        col.addEventListener('drop', async (e) => {
             e.preventDefault();
             col.classList.remove('drag-over');
-            const ventaId = Number(e.dataTransfer.getData('text/plain'));
-            Store.updateEstadoVenta(ventaId, col.dataset.estado);
-            renderAll();
+            const ventaId = e.dataTransfer.getData('text/plain');
+            try { await Store.updateEstadoVenta(ventaId, col.dataset.estado); renderAll(); } catch (err) { handleError(err); }
         });
     });
 }
@@ -220,8 +220,8 @@ function renderProductos() {
             <td class="px-6 py-4 text-right font-black text-indigo-600 text-lg">${fmt(p.precio_venta)}</td>
             <td class="px-6 py-4 text-right text-emerald-600 font-bold">+${fmt(ganancia)}</td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
-                <button onclick="App.openProductoModal(${p.id})" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="App.eliminarProducto(${p.id})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="App.openProductoModal('${p.id}')" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="App.eliminarProducto('${p.id}')" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="6" class="py-8 text-center text-slate-400">Sin productos aún</td></tr>`;
@@ -236,7 +236,7 @@ function renderProductos() {
                     <div class="w-16 h-16 bg-white rounded-xl shadow-sm border flex items-center justify-center text-2xl text-slate-400"><i class="fa-solid fa-box"></i></div>
                     <div><h3 class="text-lg font-bold text-slate-800">${p.nombre}</h3><p class="text-xs text-slate-500">${p.categoria}</p></div>
                 </div>
-                <button onclick="App.openProductoModal(${p.id})" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="App.openProductoModal('${p.id}')" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-pen"></i></button>
             </div>
             <div class="p-6 flex-1">
                 <h4 class="text-sm font-bold text-slate-700 mb-3 uppercase">Receta de Insumos</h4>
@@ -260,7 +260,9 @@ function renderProductos() {
 }
 
 function eliminarProducto(id) {
-    confirmDialog('¿Eliminar este producto del catálogo?', () => { Store.deleteProducto(id); renderAll(); });
+    confirmDialog('¿Eliminar este producto del catálogo?', async () => {
+        try { await Store.deleteProducto(id); renderAll(); } catch (e) { handleError(e); }
+    });
 }
 
 // ----- Modal Producto (con constructor de receta) -----
@@ -286,10 +288,10 @@ function openProductoModal(id) {
         </div>
     `;
 
-    openModal(editing ? 'Editar Producto' : 'Nuevo Producto', body, (formData) => {
+    openModal(editing ? 'Editar Producto' : 'Nuevo Producto', body, async (formData) => {
         const rows = [...panel().querySelectorAll('.receta-row')];
         const nuevaReceta = rows.map(row => ({
-            insumo_id: Number(row.querySelector('[name=insumo_id]').value),
+            insumo_id: row.querySelector('[name=insumo_id]').value,
             cantidad: Number(row.querySelector('[name=cantidad]').value),
             merma_pct: Number(row.querySelector('[name=merma_pct]').value) || 0,
         })).filter(r => r.insumo_id && r.cantidad > 0);
@@ -300,9 +302,11 @@ function openProductoModal(id) {
             precio_venta: Number(formData.get('precio_venta')),
             receta: nuevaReceta,
         };
-        if (editing) Store.updateProducto(editing.id, data); else Store.addProducto(data);
-        closeModal();
-        renderAll();
+        try {
+            if (editing) await Store.updateProducto(editing.id, data); else await Store.addProducto(data);
+            closeModal();
+            renderAll();
+        } catch (e) { handleError(e); }
     });
 
     function renderRecetaRows() {
@@ -320,7 +324,7 @@ function openProductoModal(id) {
             el.addEventListener('input', () => {
                 const idx = Number(el.dataset.idx);
                 const field = el.name;
-                receta[idx][field] = field === 'insumo_id' ? Number(el.value) : Number(el.value) || 0;
+                receta[idx][field] = field === 'insumo_id' ? el.value : Number(el.value) || 0;
                 updateCostoPreview();
             });
         });
@@ -367,17 +371,16 @@ function renderInventario() {
             <td class="px-6 py-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-medium ${ESTADO_STOCK_BADGE[est]}">${est}</span></td>
             <td class="px-6 py-4 text-right text-slate-600">${fmt(i.costo_unitario)} / ${i.unidad_medida}</td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
-                <button onclick="App.openInsumoModal(${i.id})" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="App.eliminarInsumo(${i.id})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="App.openInsumoModal('${i.id}')" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="App.eliminarInsumo('${i.id}')" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin insumos en esta categoría</td></tr>`;
 }
 
 function eliminarInsumo(id) {
-    confirmDialog('¿Eliminar este insumo? Los productos que lo usan en su receta quedarán con esa línea huérfana.', () => {
-        Store.deleteInsumo(id);
-        renderAll();
+    confirmDialog('¿Eliminar este insumo? Los productos que lo usan en su receta quedarán con esa línea huérfana.', async () => {
+        try { await Store.deleteInsumo(id); renderAll(); } catch (e) { handleError(e); }
     });
 }
 
@@ -409,7 +412,7 @@ function openInsumoModal(id) {
                 <input name="stock_minimo" type="number" step="0.01" min="0" required value="${editing ? editing.stock_minimo : 0}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
         </div>
     `;
-    openModal(editing ? 'Editar Insumo' : 'Nuevo Insumo', body, (formData) => {
+    openModal(editing ? 'Editar Insumo' : 'Nuevo Insumo', body, async (formData) => {
         const data = {
             nombre: formData.get('nombre'),
             categoria: formData.get('categoria'),
@@ -418,9 +421,11 @@ function openInsumoModal(id) {
             stock_actual: Number(formData.get('stock_actual')),
             stock_minimo: Number(formData.get('stock_minimo')),
         };
-        if (editing) Store.updateInsumo(editing.id, data); else Store.addInsumo(data);
-        closeModal();
-        renderAll();
+        try {
+            if (editing) await Store.updateInsumo(editing.id, data); else await Store.addInsumo(data);
+            closeModal();
+            renderAll();
+        } catch (e) { handleError(e); }
     });
 }
 
@@ -479,7 +484,7 @@ function addItemCompra() {
     `;
     openModal('Añadir Insumo a la Compra', body, (formData) => {
         itemsCompra.push({
-            insumo_id: Number(formData.get('insumo_id')),
+            insumo_id: formData.get('insumo_id'),
             cantidad: Number(formData.get('cantidad')),
             costo_unitario: Number(formData.get('costo_unitario')),
         });
@@ -488,14 +493,16 @@ function addItemCompra() {
     });
 }
 
-document.getElementById('form-compra').addEventListener('submit', (e) => {
+document.getElementById('form-compra').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (itemsCompra.length === 0) { alert('Añade al menos un insumo a la compra.'); return; }
     const formData = new FormData(e.target);
-    Store.addCompra({ proveedor: formData.get('proveedor'), fecha: formData.get('fecha'), items: itemsCompra });
-    itemsCompra = [];
-    e.target.reset();
-    renderAll();
+    try {
+        await Store.addCompra({ proveedor: formData.get('proveedor'), fecha: formData.get('fecha'), items: itemsCompra });
+        itemsCompra = [];
+        e.target.reset();
+        renderAll();
+    } catch (err) { handleError(err); }
 });
 
 // ---------------- Clientes ----------------
@@ -514,15 +521,17 @@ function renderClientes() {
             <td class="px-6 py-4">${fechaHtml}</td>
             <td class="px-6 py-4 text-center font-medium text-slate-700">${fmt(total)} (${ordenes} órdenes)</td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
-                <button onclick="App.openClienteModal(${c.id})" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="App.eliminarCliente(${c.id})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="App.openClienteModal('${c.id}')" class="text-slate-400 hover:text-indigo-600 mr-3"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="App.eliminarCliente('${c.id}')" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
     }).join('') || `<tr><td colspan="5" class="py-8 text-center text-slate-400">Sin clientes</td></tr>`;
 }
 
 function eliminarCliente(id) {
-    confirmDialog('¿Eliminar este cliente?', () => { Store.deleteCliente(id); renderAll(); });
+    confirmDialog('¿Eliminar este cliente?', async () => {
+        try { await Store.deleteCliente(id); renderAll(); } catch (e) { handleError(e); }
+    });
 }
 
 function openClienteModal(id) {
@@ -539,16 +548,18 @@ function openClienteModal(id) {
                 <input name="tipo_fecha" value="${editing ? (editing.tipo_fecha || '') : ''}" placeholder="Cumpleaños, Aniversario..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
         </div>
     `;
-    openModal(editing ? 'Editar Cliente' : 'Nuevo Cliente', body, (formData) => {
+    openModal(editing ? 'Editar Cliente' : 'Nuevo Cliente', body, async (formData) => {
         const data = {
             nombre: formData.get('nombre'),
             telefono: formData.get('telefono'),
-            fecha_especial: formData.get('fecha_especial'),
+            fecha_especial: formData.get('fecha_especial') || null,
             tipo_fecha: formData.get('tipo_fecha'),
         };
-        if (editing) Store.updateCliente(editing.id, data); else Store.addCliente(data);
-        closeModal();
-        renderAll();
+        try {
+            if (editing) await Store.updateCliente(editing.id, data); else await Store.addCliente(data);
+            closeModal();
+            renderAll();
+        } catch (e) { handleError(e); }
     });
 }
 
@@ -580,17 +591,19 @@ function openVentaModal() {
             <p class="text-sm mt-3 text-right">Total: <span id="total-venta-preview" class="font-black text-indigo-600 text-lg">$0.00</span></p>
         </div>
     `;
-    openModal('Nueva Venta', body, (formData) => {
+    openModal('Nueva Venta', body, async (formData) => {
         const rows = [...panel().querySelectorAll('.detalle-row')];
         const detalle = rows.map(row => ({
-            producto_id: Number(row.querySelector('[name=producto_id]').value),
+            producto_id: row.querySelector('[name=producto_id]').value,
             cantidad: Number(row.querySelector('[name=cantidad]').value),
             precio_unitario: Number(row.querySelector('[name=precio_unitario]').value),
         })).filter(d => d.producto_id && d.cantidad > 0);
         if (detalle.length === 0) { alert('Añade al menos un producto a la venta.'); return; }
-        Store.addVenta({ cliente_id: Number(formData.get('cliente_id')), fecha: formData.get('fecha'), detalle });
-        closeModal();
-        renderAll();
+        try {
+            await Store.addVenta({ cliente_id: formData.get('cliente_id'), fecha: formData.get('fecha'), detalle });
+            closeModal();
+            renderAll();
+        } catch (e) { handleError(e); }
     });
 
     function renderDetalleRows() {
@@ -608,8 +621,8 @@ function openVentaModal() {
             el.addEventListener('input', () => {
                 const idx = Number(el.dataset.idx);
                 if (el.name === 'producto_id') {
-                    detalleVenta[idx].producto_id = Number(el.value);
-                    const prod = Store.state.productos.find(p => p.id === Number(el.value));
+                    detalleVenta[idx].producto_id = el.value;
+                    const prod = Store.state.productos.find(p => p.id === el.value);
                     if (prod) detalleVenta[idx].precio_unitario = prod.precio_venta;
                     renderDetalleRows();
                 } else {
@@ -677,7 +690,7 @@ function renderReportes() {
         totalUnidades += d.cantidad;
     }));
     const ranking = Object.entries(unidadesPorProducto)
-        .map(([pid, uds]) => ({ producto: Store.state.productos.find(p => p.id === Number(pid)), uds }))
+        .map(([pid, uds]) => ({ producto: Store.state.productos.find(p => p.id === pid), uds }))
         .filter(r => r.producto)
         .sort((a, b) => b.uds - a.uds)
         .slice(0, 3);
@@ -710,6 +723,55 @@ document.getElementById('filtro-inventario').addEventListener('click', (e) => {
     if (btn) filtrarInventario(btn.dataset.cat);
 });
 
+// ---------------- Autenticación ----------------
+
+async function logout() {
+    await supabase.auth.signOut();
+}
+
+function showScreen(id) {
+    ['loading-screen', 'auth-screen', 'app-shell'].forEach(s => {
+        document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+}
+
+async function onAuthenticated(session) {
+    document.getElementById('user-email').textContent = session.user.email;
+    try {
+        await Store.load();
+        showScreen('app-shell');
+        showTab('inicio');
+    } catch (e) {
+        showScreen('auth-screen');
+        document.getElementById('login-error').textContent = 'No se pudo cargar la información: ' + (e?.message || e);
+        document.getElementById('login-error').classList.remove('hidden');
+    }
+}
+
+document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const errorEl = document.getElementById('login-error');
+    errorEl.classList.add('hidden');
+    const { error } = await supabase.auth.signInWithPassword({
+        email: formData.get('email'),
+        password: formData.get('password'),
+    });
+    if (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+    }
+});
+
+supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+        showScreen('loading-screen');
+        onAuthenticated(session);
+    } else {
+        showScreen('auth-screen');
+    }
+});
+
 // ---------------- Bootstrap ----------------
 
 window.App = {
@@ -718,7 +780,5 @@ window.App = {
     openProductoModal, eliminarProducto,
     openClienteModal, eliminarCliente,
     openVentaModal, cambiarEstadoVenta, eliminarVenta,
-    addItemCompra,
+    addItemCompra, logout,
 };
-
-showTab('inicio');

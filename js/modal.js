@@ -34,7 +34,7 @@ export function openModal(title, bodyHtml, onSubmit) {
 }
 
 export function confirmDialog(message, onConfirm) {
-    openModal('Confirmar', `<p class="text-sm text-slate-600">${message}</p>`, () => { onConfirm(); closeModal(); });
+    openModal('Confirmar', `<p class="text-sm text-slate-600">${message}</p>`, async () => { await onConfirm(); closeModal(); });
     const btn = panel.querySelector('button[type="submit"]');
     btn.textContent = 'Confirmar';
     btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-200');

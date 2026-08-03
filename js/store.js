@@ -1,94 +1,80 @@
 /**
- * store.js — Capa de datos de SubliApp.
- * Persistencia en localStorage. Aislada del resto de la app para poder
- * sustituirla más adelante por Supabase/Firebase sin tocar la UI.
+ * store.js — Capa de datos de SubliApp, respaldada por Supabase (Postgres + RLS).
+ * Mantiene una caché local en memoria (`state`) para que el resto de la app
+ * (render.js/app.js) siga leyendo de forma síncrona; toda escritura confirma
+ * contra Supabase primero y luego refresca la caché.
  */
 
-const STORAGE_KEY = 'subliapp_data_v1';
+import { supabase } from './supabaseClient.js';
 
-function seedData() {
-    return {
-        nextId: { insumo: 5, producto: 4, cliente: 4, venta: 48, compra: 3 },
-        insumos: [
-            { id: 1, nombre: 'Taza en Blanco 11oz AAA', categoria: 'Sustrato', unidad_medida: 'ud', costo_unitario: 1.20, stock_actual: 72, stock_minimo: 36 },
-            { id: 2, nombre: 'Franela Poliéster Blanca (M)', categoria: 'Sustrato', unidad_medida: 'ud', costo_unitario: 3.50, stock_actual: 12, stock_minimo: 10 },
-            { id: 3, nombre: 'Tinta Sublimación Cian', categoria: 'Consumible', unidad_medida: 'ml', costo_unitario: 0.10, stock_actual: 15, stock_minimo: 50 },
-            { id: 4, nombre: 'Papel Sublimación A4', categoria: 'Consumible', unidad_medida: 'hoja', costo_unitario: 0.10, stock_actual: 80, stock_minimo: 50 },
-        ],
-        productos: [
-            {
-                id: 1, nombre: 'Taza Blanca 11oz', categoria: 'Cerámica', precio_venta: 5.00,
-                receta: [
-                    { insumo_id: 1, cantidad: 1, merma_pct: 0 },
-                    { insumo_id: 3, cantidad: 2, merma_pct: 5 },
-                    { insumo_id: 4, cantidad: 1, merma_pct: 0 },
-                ]
-            },
-            {
-                id: 2, nombre: 'Franela Poliéster Blanca', categoria: 'Textil', precio_venta: 10.00,
-                receta: [
-                    { insumo_id: 2, cantidad: 1, merma_pct: 0 },
-                    { insumo_id: 3, cantidad: 3, merma_pct: 5 },
-                    { insumo_id: 4, cantidad: 1, merma_pct: 0 },
-                ]
-            },
-            {
-                id: 3, nombre: 'Gorra Camionera', categoria: 'Textil / Accesorios', precio_venta: 6.00,
-                receta: [
-                    { insumo_id: 3, cantidad: 1.5, merma_pct: 5 },
-                    { insumo_id: 4, cantidad: 1, merma_pct: 0 },
-                ]
-            },
-        ],
-        clientes: [
-            { id: 1, nombre: 'María Pérez', telefono: '+58 414-1234567', fecha_especial: '2026-08-14', tipo_fecha: 'Cumpleaños' },
-            { id: 2, nombre: 'Carlos Gómez', telefono: '+58 412-9876543', fecha_especial: '2026-10-10', tipo_fecha: 'Aniversario' },
-            { id: 3, nombre: 'Valeria Castro (Equipo Softbol)', telefono: '+58 424-5551234', fecha_especial: '', tipo_fecha: '' },
-        ],
-        ventas: [
-            {
-                id: 45, cliente_id: 3, fecha: '2026-07-29', estado: 'Entregado',
-                detalle: [{ producto_id: 1, cantidad: 3, precio_unitario: 7.50 }]
-            },
-            {
-                id: 46, cliente_id: 2, fecha: '2026-08-01', estado: 'Por Diseñar',
-                detalle: [{ producto_id: 2, cantidad: 1, precio_unitario: 10.00 }, { producto_id: 1, cantidad: 1, precio_unitario: 5.00 }]
-            },
-            {
-                id: 47, cliente_id: 3, fecha: '2026-08-02', estado: 'Imprimiendo',
-                detalle: [{ producto_id: 3, cantidad: 5, precio_unitario: 6.00 }]
-            },
-        ],
-        compras: [
-            { id: 1, proveedor: 'Distribuidora Textil', fecha: '2026-07-28', items: [{ insumo_id: 2, cantidad: 12, costo_unitario: 3.50 }] },
-            { id: 2, proveedor: 'Tintas Y Papeles C.A.', fecha: '2026-07-10', items: [{ insumo_id: 4, cantidad: 100, costo_unitario: 0.10 }, { insumo_id: 3, cantidad: 100, costo_unitario: 0.145 }] },
-        ],
-    };
+let state = {
+    insumos: [],
+    productos: [],
+    clientes: [],
+    ventas: [],
+    compras: [],
+};
+
+async function load() {
+    const [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, comprasRes, comprasDetalleRes] = await Promise.all([
+        supabase.from('insumos').select('*').order('nombre'),
+        supabase.from('productos_finales').select('*').order('nombre'),
+        supabase.from('recetas_detalle').select('*'),
+        supabase.from('clientes').select('*').order('nombre'),
+        supabase.from('ventas').select('*').order('fecha', { ascending: false }),
+        supabase.from('ventas_detalle').select('*'),
+        supabase.from('compras').select('*').order('fecha', { ascending: false }),
+        supabase.from('compras_detalle').select('*'),
+    ]);
+
+    const firstError = [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, comprasRes, comprasDetalleRes]
+        .map(r => r.error).find(Boolean);
+    if (firstError) throw firstError;
+
+    state.insumos = insumosRes.data.map(i => ({
+        ...i,
+        costo_unitario: Number(i.costo_unitario),
+        stock_actual: Number(i.stock_actual),
+        stock_minimo: Number(i.stock_minimo),
+    }));
+    state.clientes = clientesRes.data;
+
+    state.productos = productosRes.data.map(p => ({
+        ...p,
+        precio_venta: Number(p.precio_venta),
+        receta: recetasRes.data
+            .filter(r => r.producto_id === p.id)
+            .map(r => ({ insumo_id: r.insumo_id, cantidad: Number(r.cantidad_usada), merma_pct: Number(r.porcentaje_merma) })),
+    }));
+
+    state.ventas = ventasRes.data.map(v => ({
+        id: v.id,
+        folio: v.folio,
+        cliente_id: v.cliente_id,
+        fecha: v.fecha,
+        estado: v.estado_produccion,
+        detalle: ventasDetalleRes.data
+            .filter(d => d.venta_id === v.id)
+            .map(d => ({ producto_id: d.producto_id, cantidad: Number(d.cantidad), precio_unitario: Number(d.precio_unitario) })),
+    }));
+
+    state.compras = comprasRes.data.map(c => ({
+        id: c.id,
+        folio: c.folio,
+        proveedor: c.proveedor,
+        fecha: c.fecha,
+        items: comprasDetalleRes.data
+            .filter(i => i.compra_id === c.id)
+            .map(i => ({ insumo_id: i.insumo_id, cantidad: Number(i.cantidad), costo_unitario: Number(i.costo_unitario) })),
+    }));
 }
 
-let state = load();
-
-function load() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch (e) { console.warn('No se pudo leer localStorage', e); }
-    const fresh = seedData();
-    save(fresh);
-    return fresh;
+function must(res) {
+    if (res.error) throw res.error;
+    return res.data;
 }
 
-function save(s = state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-}
-
-function nextId(kind) {
-    const id = state.nextId[kind]++;
-    save();
-    return id;
-}
-
-// ---------- Cálculos financieros ----------
+// ---------- Cálculos financieros (puro JS, sin red) ----------
 
 function costoInsumoEnReceta(item) {
     const insumo = state.insumos.find(i => i.id === item.insumo_id);
@@ -111,73 +97,72 @@ function gananciaNeta(producto) {
     return producto.precio_venta - costoProduccion(producto);
 }
 
-// ---------- Insumos ----------
-
 function estadoStock(insumo) {
     if (insumo.stock_actual <= insumo.stock_minimo * 0.5) return 'Crítico';
     if (insumo.stock_actual <= insumo.stock_minimo) return 'Alerta';
     return 'Óptimo';
 }
 
-function addInsumo(data) {
-    const insumo = { id: nextId('insumo'), stock_actual: 0, ...data };
-    state.insumos.push(insumo);
-    save();
-    return insumo;
+// ---------- Insumos ----------
+
+async function addInsumo(data) {
+    must(await supabase.from('insumos').insert(data));
+    await load();
 }
 
-function updateInsumo(id, data) {
-    const insumo = state.insumos.find(i => i.id === id);
-    if (!insumo) return;
-    Object.assign(insumo, data);
-    save();
+async function updateInsumo(id, data) {
+    must(await supabase.from('insumos').update(data).eq('id', id));
+    await load();
 }
 
-function deleteInsumo(id) {
-    state.insumos = state.insumos.filter(i => i.id !== id);
-    save();
+async function deleteInsumo(id) {
+    must(await supabase.from('insumos').delete().eq('id', id));
+    await load();
 }
 
 // ---------- Productos ----------
 
-function addProducto(data) {
-    const producto = { id: nextId('producto'), receta: [], ...data };
-    state.productos.push(producto);
-    save();
-    return producto;
+async function addProducto({ receta, ...data }) {
+    const producto = must(await supabase.from('productos_finales').insert(data).select().single());
+    if (receta.length) {
+        must(await supabase.from('recetas_detalle').insert(
+            receta.map(r => ({ producto_id: producto.id, insumo_id: r.insumo_id, cantidad_usada: r.cantidad, porcentaje_merma: r.merma_pct }))
+        ));
+    }
+    await load();
 }
 
-function updateProducto(id, data) {
-    const producto = state.productos.find(p => p.id === id);
-    if (!producto) return;
-    Object.assign(producto, data);
-    save();
+async function updateProducto(id, { receta, ...data }) {
+    must(await supabase.from('productos_finales').update(data).eq('id', id));
+    must(await supabase.from('recetas_detalle').delete().eq('producto_id', id));
+    if (receta.length) {
+        must(await supabase.from('recetas_detalle').insert(
+            receta.map(r => ({ producto_id: id, insumo_id: r.insumo_id, cantidad_usada: r.cantidad, porcentaje_merma: r.merma_pct }))
+        ));
+    }
+    await load();
 }
 
-function deleteProducto(id) {
-    state.productos = state.productos.filter(p => p.id !== id);
-    save();
+async function deleteProducto(id) {
+    must(await supabase.from('productos_finales').delete().eq('id', id));
+    await load();
 }
 
 // ---------- Clientes ----------
 
-function addCliente(data) {
-    const cliente = { id: nextId('cliente'), ...data };
-    state.clientes.push(cliente);
-    save();
-    return cliente;
+async function addCliente(data) {
+    must(await supabase.from('clientes').insert(data));
+    await load();
 }
 
-function updateCliente(id, data) {
-    const cliente = state.clientes.find(c => c.id === id);
-    if (!cliente) return;
-    Object.assign(cliente, data);
-    save();
+async function updateCliente(id, data) {
+    must(await supabase.from('clientes').update(data).eq('id', id));
+    await load();
 }
 
-function deleteCliente(id) {
-    state.clientes = state.clientes.filter(c => c.id !== id);
-    save();
+async function deleteCliente(id) {
+    must(await supabase.from('clientes').delete().eq('id', id));
+    await load();
 }
 
 function totalCompradoCliente(clienteId) {
@@ -194,53 +179,37 @@ function montoVenta(venta) {
     return venta.detalle.reduce((sum, d) => sum + d.cantidad * d.precio_unitario, 0);
 }
 
-function addVenta({ cliente_id, fecha, detalle, estado }) {
-    const venta = { id: nextId('venta'), cliente_id, fecha, estado: estado || 'Por Diseñar', detalle };
-    state.ventas.push(venta);
-    // Descuenta stock de insumos según receta de cada producto vendido
-    detalle.forEach(d => {
-        const producto = state.productos.find(p => p.id === d.producto_id);
-        if (!producto) return;
-        producto.receta.forEach(item => {
-            const insumo = state.insumos.find(i => i.id === item.insumo_id);
-            if (!insumo) return;
-            const merma = 1 + (item.merma_pct || 0) / 100;
-            insumo.stock_actual -= item.cantidad * merma * d.cantidad;
-        });
+async function addVenta({ cliente_id, fecha, detalle, estado }) {
+    const { error } = await supabase.rpc('registrar_venta', {
+        p_cliente_id: cliente_id,
+        p_fecha: fecha,
+        p_estado: estado || 'Por Diseñar',
+        p_detalle: detalle,
     });
-    save();
-    return venta;
+    if (error) throw error;
+    await load();
 }
 
-function updateEstadoVenta(id, estado) {
-    const venta = state.ventas.find(v => v.id === id);
-    if (!venta) return;
-    venta.estado = estado;
-    save();
+async function updateEstadoVenta(id, estado) {
+    must(await supabase.from('ventas').update({ estado_produccion: estado }).eq('id', id));
+    await load();
 }
 
-function deleteVenta(id) {
-    state.ventas = state.ventas.filter(v => v.id !== id);
-    save();
+async function deleteVenta(id) {
+    must(await supabase.from('ventas').delete().eq('id', id));
+    await load();
 }
 
 // ---------- Compras ----------
 
-function addCompra({ proveedor, fecha, items }) {
-    const compra = { id: nextId('compra'), proveedor, fecha, items };
-    state.compras.push(compra);
-    // Actualiza stock y recalcula costo unitario promedio ponderado
-    items.forEach(item => {
-        const insumo = state.insumos.find(i => i.id === item.insumo_id);
-        if (!insumo) return;
-        const valorActual = insumo.costo_unitario * insumo.stock_actual;
-        const valorNuevo = item.costo_unitario * item.cantidad;
-        const stockTotal = insumo.stock_actual + item.cantidad;
-        insumo.costo_unitario = stockTotal > 0 ? (valorActual + valorNuevo) / stockTotal : insumo.costo_unitario;
-        insumo.stock_actual = stockTotal;
+async function addCompra({ proveedor, fecha, items }) {
+    const { error } = await supabase.rpc('registrar_compra', {
+        p_proveedor: proveedor,
+        p_fecha: fecha,
+        p_items: items,
     });
-    save();
-    return compra;
+    if (error) throw error;
+    await load();
 }
 
 function montoCompra(compra) {
@@ -264,7 +233,7 @@ function kpisDelMes(fechaRef = new Date()) {
 
 export const Store = {
     get state() { return state; },
-    load, save,
+    load,
     costoInsumoEnReceta, costoProduccion, margenPct, gananciaNeta,
     estadoStock,
     addInsumo, updateInsumo, deleteInsumo,
