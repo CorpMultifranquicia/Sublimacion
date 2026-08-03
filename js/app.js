@@ -6,6 +6,7 @@ const fmt = (n) => `$${(n || 0).toFixed(2)}`;
 const panel = () => document.getElementById('modal-panel');
 const handleError = (e) => { console.error(e); alert('Ocurrió un error: ' + (e?.message || e)); };
 const folioTxt = (n) => String(n).padStart(4, '0');
+const waLink = (telefono) => `https://wa.me/${telefono.replace(/\D/g, '')}`;
 
 const tabData = {
     inicio: { title: 'Resumen del Mes', subtitle: 'Vista general de tu negocio', action: null },
@@ -182,10 +183,13 @@ function renderProduccion() {
                             <span class="text-xs font-mono text-indigo-600 font-bold">#VEN-${folioTxt(v.folio)}</span>
                         </div>
                         <p class="font-bold text-slate-800 text-sm mb-1">${detalleTexto(v)}</p>
-                        <div class="flex justify-between items-center text-xs">
+                        <div class="flex justify-between items-center text-xs mb-2">
                             <span class="text-slate-400"><i class="fa-regular fa-user mr-1"></i> ${cliente ? cliente.nombre : '—'}</span>
                             <span class="font-bold text-slate-600">${fmt(Store.montoVenta(v))}</span>
                         </div>
+                        <button onclick="App.openAdjuntosModal('${v.id}')" class="text-xs text-slate-400 hover:text-indigo-600 flex items-center gap-1">
+                            <i class="fa-solid fa-paperclip"></i> ${v.adjuntos.length ? `${v.adjuntos.length} adjunto${v.adjuntos.length > 1 ? 's' : ''}` : 'Adjuntar diseño'}
+                        </button>
                     </div>`;
                 }).join('') || `<p class="text-xs text-slate-400 text-center py-6">Vacío</p>`}
             </div>
@@ -205,6 +209,84 @@ function renderProduccion() {
             try { await Store.updateEstadoVenta(ventaId, col.dataset.estado); renderAll(); } catch (err) { handleError(err); }
         });
     });
+}
+
+function openAdjuntosModal(ventaId) {
+    const venta = Store.state.ventas.find(v => v.id === ventaId);
+    if (!venta) return;
+
+    const body = `
+        <div>
+            <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Adjuntos de #VEN-${folioTxt(venta.folio)}</h4>
+            <ul id="lista-adjuntos" class="space-y-2 mb-4"></ul>
+        </div>
+        <div class="pt-4 border-t border-slate-100 space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Subir imagen</label>
+                <input id="input-adjunto-imagen" type="file" accept="image/*" class="w-full text-sm">
+            </div>
+            <div class="flex gap-2 items-end">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">O pegar enlace (Drive, etc.)</label>
+                    <input id="input-adjunto-url" type="url" placeholder="https://drive.google.com/..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+                <button type="button" id="btn-add-enlace" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">Añadir</button>
+            </div>
+        </div>
+    `;
+
+    openModal('Adjuntos de Diseño', body, () => closeModal());
+    // El botón "Guardar" por defecto del modal no aplica aquí; se oculta y se maneja todo con botones propios.
+    panel().querySelector('button[type="submit"]').classList.add('hidden');
+
+    function renderLista() {
+        const ul = panel().querySelector('#lista-adjuntos');
+        if (!ul) return;
+        ul.innerHTML = venta.adjuntos.map(a => `
+            <li class="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                <a href="${a.url}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-indigo-600 hover:underline truncate">
+                    <i class="fa-solid ${a.tipo === 'imagen' ? 'fa-image' : 'fa-link'}"></i>
+                    <span class="truncate">${a.nombre || a.url}</span>
+                </a>
+                <button type="button" data-del-adjunto="${a.id}" class="text-slate-300 hover:text-rose-500 shrink-0"><i class="fa-solid fa-xmark"></i></button>
+            </li>`).join('') || '<li class="text-xs text-slate-400">Sin adjuntos aún</li>';
+        ul.querySelectorAll('[data-del-adjunto]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    await Store.deleteAdjunto(btn.dataset.delAdjunto);
+                    venta.adjuntos = Store.state.ventas.find(v => v.id === ventaId)?.adjuntos || [];
+                    renderLista();
+                    renderAll();
+                } catch (e) { handleError(e); }
+            });
+        });
+    }
+
+    panel().querySelector('#btn-add-enlace').addEventListener('click', async () => {
+        const input = panel().querySelector('#input-adjunto-url');
+        if (!input.value) return;
+        try {
+            await Store.addAdjuntoEnlace(ventaId, input.value, input.value.split('/').pop());
+            venta.adjuntos = Store.state.ventas.find(v => v.id === ventaId)?.adjuntos || [];
+            input.value = '';
+            renderLista();
+            renderAll();
+        } catch (e) { handleError(e); }
+    });
+
+    panel().querySelector('#input-adjunto-imagen').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            await Store.addAdjuntoImagen(ventaId, file);
+            venta.adjuntos = Store.state.ventas.find(v => v.id === ventaId)?.adjuntos || [];
+            e.target.value = '';
+            renderLista();
+            renderAll();
+        } catch (err) { handleError(err); }
+    });
+
+    renderLista();
 }
 
 // ---------------- Productos ----------------
@@ -516,8 +598,8 @@ function renderClientes() {
             ? `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium"><i class="fa-solid fa-cake-candles mr-1"></i> ${c.fecha_especial} (${c.tipo_fecha || 'Especial'})</span>`
             : `<span class="text-slate-400 text-xs">Sin registrar</span>`;
         return `<tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-6 py-4 font-bold text-slate-700">${c.nombre}</td>
-            <td class="px-6 py-4 text-slate-500">${c.telefono ? `<i class="fa-brands fa-whatsapp text-green-500 mr-1"></i> ${c.telefono}` : '—'}</td>
+            <td class="px-6 py-4 font-bold text-slate-700"><button onclick="App.openClienteDetalle('${c.id}')" class="hover:text-indigo-600 hover:underline text-left">${c.nombre}</button></td>
+            <td class="px-6 py-4 text-slate-500">${c.telefono ? `<a href="${waLink(c.telefono)}" target="_blank" rel="noopener" class="hover:underline"><i class="fa-brands fa-whatsapp text-green-500 mr-1"></i> ${c.telefono}</a>` : '—'}</td>
             <td class="px-6 py-4">${fechaHtml}</td>
             <td class="px-6 py-4 text-center font-medium text-slate-700">${fmt(total)} (${ordenes} órdenes)</td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
@@ -532,6 +614,42 @@ function eliminarCliente(id) {
     confirmDialog('¿Eliminar este cliente?', async () => {
         try { await Store.deleteCliente(id); renderAll(); } catch (e) { handleError(e); }
     });
+}
+
+function openClienteDetalle(id) {
+    const cliente = Store.state.clientes.find(c => c.id === id);
+    if (!cliente) return;
+    const { total, ordenes } = Store.totalCompradoCliente(id);
+    const historial = [...Store.state.ventas].filter(v => v.cliente_id === id).sort((a, b) => b.folio - a.folio);
+
+    const body = `
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h4 class="text-lg font-bold text-slate-800">${cliente.nombre}</h4>
+                ${cliente.telefono ? `<a href="${waLink(cliente.telefono)}" target="_blank" rel="noopener" class="text-sm text-emerald-600 hover:underline"><i class="fa-brands fa-whatsapp mr-1"></i>${cliente.telefono}</a>` : '<p class="text-sm text-slate-400">Sin teléfono registrado</p>'}
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-500">Total comprado</p>
+                <p class="text-lg font-black text-indigo-600">${fmt(total)}</p>
+                <p class="text-xs text-slate-400">${ordenes} órdenes</p>
+            </div>
+        </div>
+        ${cliente.fecha_especial ? `<p class="text-xs mb-4"><span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium"><i class="fa-solid fa-cake-candles mr-1"></i>${cliente.fecha_especial} (${cliente.tipo_fecha || 'Especial'})</span></p>` : ''}
+        <h5 class="text-xs font-bold text-slate-500 uppercase mb-2 pt-2 border-t border-slate-100">Historial de Compras</h5>
+        <ul class="space-y-2 max-h-64 overflow-y-auto">
+            ${historial.map(v => `
+                <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                    <div>
+                        <p class="font-mono text-xs text-indigo-600 font-bold">#VEN-${folioTxt(v.folio)}</p>
+                        <p class="text-slate-600">${detalleTexto(v)}</p>
+                        <p class="text-xs text-slate-400">${v.fecha} · ${v.estado}</p>
+                    </div>
+                    <span class="font-bold text-slate-700">${fmt(Store.montoVenta(v))}</span>
+                </li>`).join('') || '<li class="text-sm text-slate-400 text-center py-4">Sin compras registradas</li>'}
+        </ul>
+    `;
+    openModal('Detalle de Cliente', body, () => closeModal());
+    panel().querySelector('button[type="submit"]').classList.add('hidden');
 }
 
 function openClienteModal(id) {
@@ -778,7 +896,7 @@ window.App = {
     showTab, toggleProdView,
     openInsumoModal, eliminarInsumo,
     openProductoModal, eliminarProducto,
-    openClienteModal, eliminarCliente,
-    openVentaModal, cambiarEstadoVenta, eliminarVenta,
+    openClienteModal, eliminarCliente, openClienteDetalle,
+    openVentaModal, cambiarEstadoVenta, eliminarVenta, openAdjuntosModal,
     addItemCompra, logout,
 };

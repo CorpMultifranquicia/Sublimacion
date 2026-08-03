@@ -16,18 +16,19 @@ let state = {
 };
 
 async function load() {
-    const [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, comprasRes, comprasDetalleRes] = await Promise.all([
+    const [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, adjuntosRes, comprasRes, comprasDetalleRes] = await Promise.all([
         supabase.from('insumos').select('*').order('nombre'),
         supabase.from('productos_finales').select('*').order('nombre'),
         supabase.from('recetas_detalle').select('*'),
         supabase.from('clientes').select('*').order('nombre'),
         supabase.from('ventas').select('*').order('fecha', { ascending: false }),
         supabase.from('ventas_detalle').select('*'),
+        supabase.from('venta_adjuntos').select('*').order('created_at'),
         supabase.from('compras').select('*').order('fecha', { ascending: false }),
         supabase.from('compras_detalle').select('*'),
     ]);
 
-    const firstError = [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, comprasRes, comprasDetalleRes]
+    const firstError = [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, adjuntosRes, comprasRes, comprasDetalleRes]
         .map(r => r.error).find(Boolean);
     if (firstError) throw firstError;
 
@@ -56,6 +57,9 @@ async function load() {
         detalle: ventasDetalleRes.data
             .filter(d => d.venta_id === v.id)
             .map(d => ({ producto_id: d.producto_id, cantidad: Number(d.cantidad), precio_unitario: Number(d.precio_unitario) })),
+        adjuntos: adjuntosRes.data
+            .filter(a => a.venta_id === v.id)
+            .map(a => ({ id: a.id, tipo: a.tipo, url: a.url, nombre: a.nombre })),
     }));
 
     state.compras = comprasRes.data.map(c => ({
@@ -200,6 +204,27 @@ async function deleteVenta(id) {
     await load();
 }
 
+// ---------- Adjuntos de producción ----------
+
+async function addAdjuntoEnlace(ventaId, url, nombre) {
+    must(await supabase.from('venta_adjuntos').insert({ venta_id: ventaId, tipo: 'enlace', url, nombre }));
+    await load();
+}
+
+async function addAdjuntoImagen(ventaId, file) {
+    const path = `${ventaId}/${crypto.randomUUID()}-${file.name}`;
+    const upload = await supabase.storage.from('adjuntos').upload(path, file);
+    if (upload.error) throw upload.error;
+    const { data: { publicUrl } } = supabase.storage.from('adjuntos').getPublicUrl(path);
+    must(await supabase.from('venta_adjuntos').insert({ venta_id: ventaId, tipo: 'imagen', url: publicUrl, nombre: file.name }));
+    await load();
+}
+
+async function deleteAdjunto(id) {
+    must(await supabase.from('venta_adjuntos').delete().eq('id', id));
+    await load();
+}
+
 // ---------- Compras ----------
 
 async function addCompra({ proveedor, fecha, items }) {
@@ -240,6 +265,7 @@ export const Store = {
     addProducto, updateProducto, deleteProducto,
     addCliente, updateCliente, deleteCliente, totalCompradoCliente,
     ESTADOS_PRODUCCION, montoVenta, addVenta, updateEstadoVenta, deleteVenta,
+    addAdjuntoEnlace, addAdjuntoImagen, deleteAdjunto,
     addCompra, montoCompra,
     kpisDelMes,
 };
