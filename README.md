@@ -15,7 +15,8 @@ App estática (HTML + Tailwind CDN + FontAwesome + JS vanilla con módulos ES), 
 - **Compras**: registro de facturas de proveedor; actualiza stock y recalcula el costo unitario promedio ponderado del insumo (vía función SQL transaccional `registrar_compra`).
 - **Clientes (CRM)**: directorio con WhatsApp directo, fechas especiales (con felicitación preformateada por WhatsApp), detalle de cliente con historial completo de compras, y ranking de mejores clientes.
 - **Reportes**: gráfico de ingresos vs gastos (6 meses), productos más vendidos del mes, top clientes.
-- **Login**: los 2 administradores acceden con email/contraseña vía Supabase Auth. Todas las tablas tienen RLS: solo usuarios autenticados leen/escriben.
+- **Login**: los administradores acceden con email/contraseña vía Supabase Auth. Todas las tablas tienen RLS: cualquier usuario autenticado tiene acceso total (crear, editar, eliminar, ver reportes) — no hay roles diferenciados, por diseño. Da cuenta a cada persona que use el sistema sabiendo que su acceso es total.
+- **Precios de insumos y productos son editables directo**, sin pasar por Compras ni por una receta: en Inventario, el ✏️ de cualquier insumo permite cambiar su costo unitario y stock a mano; en Prod. y Precios, el ✏️ de cualquier producto permite cambiar su precio de venta. Compras solo es necesaria para *registrar una entrada de mercancía* (mueve stock y recalcula el costo promedio), no para poder editar un precio.
 
 ## Configurar Supabase (una sola vez)
 
@@ -44,6 +45,22 @@ python3 -m http.server 8080
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
 3. Vercel usa `vercel.json` (build command `npm run build`, output `.`). El build corre `scripts/build-config.js`, que genera `js/config.js` a partir de esas variables — así las credenciales nunca quedan en el repo y puedes tener valores distintos por entorno (preview/producción).
+
+## Traspasar el sistema a alguien más (carga de datos reales)
+
+Cuando quieras entregarle la app a la persona que va a cargar el inventario real y armar las recetas:
+
+1. **Limpia los datos de prueba.** En el SQL Editor de Supabase, ejecuta [`supabase/reset_datos_prueba.sql`](supabase/reset_datos_prueba.sql). Borra todos los insumos/productos/clientes/ventas/compras de prueba y reinicia los folios a 1 — pero no toca la estructura de tablas, las políticas, ni los usuarios. Es irreversible, léelo antes de correrlo.
+   - Si subiste imágenes de prueba como adjuntos, bórralas aparte en **Storage → adjuntos** (el SQL no toca archivos, solo filas).
+2. **Crea su acceso.** En **Authentication → Users → Add user**, dale su email + contraseña (marca "Auto Confirm User"). Tendrá el mismo acceso total que los demás administradores — no hay roles restringidos en este sistema.
+3. **Pásale la URL de Vercel** y sus credenciales de acceso.
+
+Orden recomendado para cargar datos desde cero (el sistema no lo obliga, pero evita ir y viniendo):
+
+1. **Inventario** → crear todos los insumos (tinta, papel, tazas en blanco, franelas, etc.) con su costo unitario y stock inicial real.
+2. **Prod. y Precios** → crear cada producto final, armar su receta seleccionando los insumos ya cargados (cantidad + % de merma) y fijar el precio de venta. El costo, margen % y ganancia neta se calculan solos.
+3. **Clientes** (opcional en esta etapa) → cargar el directorio si ya lo tienen.
+4. A partir de ahí, **Ventas**, **Compras**, **Producción** y **Reportes** ya funcionan solos con datos reales — no requieren configuración adicional.
 
 ## Arquitectura
 
