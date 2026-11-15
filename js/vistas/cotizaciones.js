@@ -4,7 +4,7 @@
  */
 
 import { Store } from '../store.js';
-import { esc, fmt, fmtNum, fmtFecha, hoyISO, folioCotizacion, folioVenta, abrirWhatsApp, normalizar, diasEntre } from '../util.js';
+import { esc, fmt, fmtBs, fmtTasa, fmtNum, fmtFecha, hoyISO, folioCotizacion, folioVenta, abrirWhatsApp, normalizar, diasEntre } from '../util.js';
 import { openModal, closeModal, confirmDialog, toast, handleError, combo } from '../ui.js';
 import { generarCotizacionPDF } from '../pdf.js';
 import { openVentaModal } from './ventas.js';
@@ -95,7 +95,9 @@ function enviarCotizacionWhatsApp(id) {
     const tel = Store.state.clientes.find(x => x.id === c.cliente_id)?.telefono;
     const negocio = Store.state.config.negocio_nombre || '';
     const lineas = c.items.map(i => `• ${fmtNum(i.cantidad)} x ${i.producto_nombre}: ${fmt(i.cantidad * i.precio_unitario)}`).join('\n');
-    abrirWhatsApp(tel, `Hola ${c.cliente_nombre}, te enviamos la cotización ${folioCotizacion(c)}:\n${lineas}\n*Total: ${fmt(Store.montoCotizacion(c))}*\nVálida hasta el ${fmtFecha(Store.venceCotizacion(c))}.${negocio ? `\n\n${negocio}` : ''}`);
+    const tasa = Store.bsActivo() ? (c.tasa || Store.tasaDia()) : null;
+    const totalBs = tasa ? ` (${fmtBs(Store.montoCotizacion(c) * tasa)} a tasa ${fmtTasa(tasa)})` : '';
+    abrirWhatsApp(tel, `Hola ${c.cliente_nombre}, te enviamos la cotización ${folioCotizacion(c)}:\n${lineas}\n*Total: ${fmt(Store.montoCotizacion(c))}*${totalBs}\nVálida hasta el ${fmtFecha(Store.venceCotizacion(c))}.${negocio ? `\n\n${negocio}` : ''}`);
     toast('Adjunta también el PDF de la cotización en el chat si lo necesitas.', 'info');
 }
 
@@ -108,6 +110,7 @@ function convertirCotizacion(id) {
         cliente_nombre: c.cliente_id ? undefined : c.cliente_nombre, // prospecto: se propone crearlo
         cotizacion_id: c.id,
         notas: c.notas,
+        tasa: c.tasa,
         items: c.items.map(i => ({
             producto_id: Store.state.productos.some(p => p.id === i.producto_id) ? i.producto_id : null,
             nombre: i.producto_nombre, cantidad: i.cantidad, precio_unitario: i.precio_unitario, desdeCotizacion: true,
@@ -147,8 +150,11 @@ function openCotizacionModal(id, duplicar = false) {
         </div>
         <div>${etiqueta('Notas para el cliente')}<textarea name="notas" rows="2" class="${claseInput}" placeholder="Tiempo de entrega, detalles del diseño...">${esc(original?.notas || '')}</textarea>
             <p class="text-xs text-slate-400 mt-1">Las condiciones generales se toman de Configuración.</p></div>
-        <div class="flex justify-end items-baseline gap-3 pt-2 border-t border-slate-100">
-            <span class="text-sm text-slate-500">Total</span><span id="cot-total" class="text-2xl font-black text-violet-600">${fmt(0)}</span>
+        <div class="flex flex-wrap justify-end items-end gap-x-6 gap-y-2 pt-2 border-t border-slate-100">
+            ${Store.bsActivo() ? `<div class="mr-auto"><label class="block text-xs text-slate-500 mb-1">Tasa (Bs por $)</label>
+                <input name="tasa" type="number" step="any" min="0" value="${editando?.tasa ?? Store.tasaDia() ?? ''}" class="${claseInput} w-32" placeholder="sin tasa"></div>` : ''}
+            <div class="text-right"><span class="text-sm text-slate-500 mr-2">Total</span><span id="cot-total" class="text-2xl font-black text-violet-600">${fmt(0)}</span>
+                <p id="cot-total-bs" class="text-sm text-slate-500"></p></div>
         </div>`;
 
     const { panel } = openModal(editando ? `Editar ${folioCotizacion(editando)}` : 'Nueva cotización', body, async (formData) => {
@@ -159,6 +165,7 @@ function openCotizacionModal(id, duplicar = false) {
         const datos = {
             cliente_id: cliente?.id || null, cliente_nombre: cliente?.label || '',
             fecha: formData.get('fecha'), validez_dias: Number(formData.get('validez_dias')), notas: formData.get('notas'), items,
+            tasa: Number(formData.get('tasa')) || null,
         };
         try {
             let cot;
@@ -186,6 +193,8 @@ function openCotizacionModal(id, duplicar = false) {
     const total = () => lineas.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0), 0);
     function actualizar() {
         panel.querySelector('#cot-total').textContent = fmt(total());
+        const t = Number(panel.querySelector('[name=tasa]')?.value) || 0;
+        panel.querySelector('#cot-total-bs').textContent = t ? `≈ ${fmtBs(total() * t)}` : '';
         lineas.forEach((l, i) => {
             const el = panel.querySelector(`[data-subtotal="${i}"]`);
             if (el) el.textContent = fmt((Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0));
@@ -234,6 +243,7 @@ function openCotizacionModal(id, duplicar = false) {
         }));
         actualizar();
     }
+    panel.querySelector('[name=tasa]')?.addEventListener('input', actualizar);
     panel.querySelector('#btn-add-cot').addEventListener('click', () => {
         lineas.push({ producto_id: null, producto_nombre: '', cantidad: 1, precio_unitario: 0 });
         pintar();

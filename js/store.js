@@ -45,7 +45,7 @@ async function api(metodo, ruta, datos) {
 
 async function load() {
     state = await api('GET', '/api/estado');
-    configurarMoneda(state.config.moneda);
+    configurarMoneda(state.config.moneda, state.config.moneda_local);
 }
 
 /** Ejecuta una escritura y recarga el estado. Devuelve la respuesta de la API. */
@@ -176,6 +176,25 @@ const montoCompra = (c) => c.items.reduce((s, i) => s + i.cantidad * i.costo_uni
 const montoCotizacion = (c) => c.items.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
 const venceCotizacion = (c) => sumarDias(c.fecha, c.validez_dias);
 
+// ---------- Bolívares y tasa del día ----------
+
+/** ¿Está activado el manejo de bolívares en Configuración? */
+const bsActivo = () => state.config.bs_activo === '1';
+
+/** Tasa del día (Bs por $) o null si no se ha cargado. */
+function tasaDia() {
+    const t = Number(state.config.tasa_dia);
+    return t > 0 ? t : null;
+}
+
+/** ¿La tasa cargada es de hoy? */
+const tasaEsDeHoy = () => state.config.tasa_fecha === hoyISO();
+
+/** Convierte un monto en $ a Bs con la tasa indicada (o la del día). */
+function aBs(monto, tasa = tasaDia()) {
+    return tasa ? monto * tasa : null;
+}
+
 // ---------- Resúmenes por período ----------
 
 function resumenPeriodo(desde, hasta) {
@@ -213,6 +232,7 @@ export const Store = {
     totalCompradoCliente, fechasEspecialesProximas,
     montoCompra, montoCotizacion, venceCotizacion,
     resumenPeriodo, porCobrarTotal,
+    bsActivo, tasaDia, tasaEsDeHoy, aBs,
 
     // insumos
     addInsumo: (d) => escribir('POST', '/api/insumos', d),
@@ -264,6 +284,10 @@ export const Store = {
     addGasto: (d) => escribir('POST', '/api/gastos', d),
     updateGasto: (id, d) => escribir('PUT', `/api/gastos/${id}`, d),
     deleteGasto: (id) => escribir('DELETE', `/api/gastos/${id}`),
+
+    // tasa de cambio
+    guardarTasa: (fecha, tasa) => escribir('POST', '/api/tasas', { fecha, tasa }),
+    borrarTasa: (fecha) => escribir('DELETE', `/api/tasas/${fecha}`),
 
     // configuración y sistema
     guardarConfig: (d) => escribir('PUT', '/api/config', d),

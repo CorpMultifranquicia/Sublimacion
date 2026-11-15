@@ -4,7 +4,7 @@
  */
 
 import { Store } from '../store.js';
-import { esc, fmt, fmtNum, fmtFecha, hoyISO, folioVenta, abrirWhatsApp, normalizar } from '../util.js';
+import { esc, fmt, fmtBs, fmtTasa, fmtNum, fmtFecha, hoyISO, folioVenta, abrirWhatsApp, normalizar } from '../util.js';
 import { openModal, closeModal, confirmDialog, toast, handleError, combo } from '../ui.js';
 import { generarReciboPDF } from '../pdf.js';
 import {
@@ -52,9 +52,13 @@ export function mensajeEstado(venta) {
         'Entregado': `${saludo}, gracias por tu compra ${pedido}. ¡Esperamos que lo disfrutes!`,
     };
     let msg = textos[venta.estado] || `${saludo}, tu pedido ${pedido} está en estado: ${venta.estado}.`;
+    const tasa = Store.bsActivo() ? Store.tasaDia() : null;
     msg += `\nTotal: ${fmt(Store.montoVenta(venta))}`;
     if (Store.pagadoVenta(venta) > 0) msg += ` · Abonado: ${fmt(Store.pagadoVenta(venta))}`;
-    if (saldo > 0 && venta.estado !== 'Entregado') msg += `\nSaldo pendiente: *${fmt(saldo)}*`;
+    if (saldo > 0 && venta.estado !== 'Entregado') {
+        msg += `\nSaldo pendiente: *${fmt(saldo)}*`;
+        if (tasa) msg += ` (${fmtBs(saldo * tasa)} a tasa ${fmtTasa(tasa)})`;
+    }
     if (negocio) msg += `\n\n${negocio}`;
     return msg;
 }
@@ -196,14 +200,18 @@ export function openVentaModal(id, prefill = {}) {
         ${editando ? '' : `
         <div class="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl">
             <p class="text-xs font-bold text-emerald-700 uppercase mb-2"><i class="fa-solid fa-hand-holding-dollar mr-1"></i>Abono inicial (opcional)</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+                ${Store.bsActivo() ? `<div><label class="block text-xs text-slate-500 mb-1">Paga en</label><select name="abono_moneda" class="${claseInput}"><option value="USD">${esc(Store.state.config.moneda || '$')}</option><option value="VES">${esc(Store.state.config.moneda_local || 'Bs')}</option></select></div>` : ''}
                 <div><label class="block text-xs text-slate-500 mb-1">Monto</label><input name="abono_monto" type="number" step="0.01" min="0" class="${claseInput}" placeholder="0,00"></div>
                 <div><label class="block text-xs text-slate-500 mb-1">Método</label><select name="abono_metodo" class="${claseInput}">${Store.METODOS_PAGO.map(m => `<option>${m}</option>`).join('')}</select></div>
                 <div class="flex gap-2"><button type="button" data-abono="0.5" class="flex-1 px-2 py-2 text-xs rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-100">50%</button><button type="button" data-abono="1" class="flex-1 px-2 py-2 text-xs rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-100">Total</button></div>
             </div>
         </div>`}
-        <div class="flex justify-end items-baseline gap-3 pt-2 border-t border-slate-100">
-            <span class="text-sm text-slate-500">Total</span><span id="venta-total" class="text-2xl font-black text-indigo-600">${fmt(0)}</span>
+        <div class="flex flex-wrap justify-end items-end gap-x-6 gap-y-2 pt-2 border-t border-slate-100">
+            ${Store.bsActivo() ? `<div class="mr-auto"><label class="block text-xs text-slate-500 mb-1">Tasa (Bs por $)</label>
+                <input name="tasa" type="number" step="any" min="0" value="${editando?.tasa ?? prefill.tasa ?? Store.tasaDia() ?? ''}" class="${claseInput} w-32" placeholder="sin tasa"></div>` : ''}
+            <div class="text-right"><span class="text-sm text-slate-500 mr-2">Total</span><span id="venta-total" class="text-2xl font-black text-indigo-600">${fmt(0)}</span>
+                <p id="venta-total-bs" class="text-sm text-slate-500"></p></div>
         </div>`;
 
     const { panel } = openModal(editando ? `Editar venta ${folioVenta(editando)}` : (prefill.cotizacion_id ? 'Convertir cotización en venta' : 'Nueva venta'), body, async (formData) => {
@@ -225,6 +233,7 @@ export function openVentaModal(id, prefill = {}) {
         if (!detalle.length) { toast('Añade al menos un producto con cantidad mayor a cero.', 'aviso'); return; }
         const datos = {
             cliente_id: cliente.id || null,
+            tasa: Number(formData.get('tasa')) || null,
             fecha: formData.get('fecha'),
             fecha_entrega: formData.get('fecha_entrega') || null,
             notas: formData.get('notas'),
@@ -239,7 +248,11 @@ export function openVentaModal(id, prefill = {}) {
                 toast(`Venta ${folioVenta(editando)} actualizada; el stock se recalculó.`);
             } else {
                 const monto = Number(formData.get('abono_monto')) || 0;
-                if (monto > 0) datos.abono = { monto, metodo: formData.get('abono_metodo') };
+                if (monto > 0) {
+                    datos.abono = formData.get('abono_moneda') === 'VES'
+                        ? { moneda: 'VES', monto_original: monto, tasa: datos.tasa, metodo: formData.get('abono_metodo') }
+                        : { moneda: 'USD', monto, metodo: formData.get('abono_metodo') };
+                }
                 if (prefill.cotizacion_id) datos.cotizacion_id = prefill.cotizacion_id;
                 await Store.addVenta(datos);
                 const nueva = Store.state.ventas.reduce((a, b) => (a.folio > b.folio ? a : b));
@@ -267,8 +280,11 @@ export function openVentaModal(id, prefill = {}) {
 
     const total = () => lineas.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0), 0);
 
+    const tasaVenta = () => Number(panel.querySelector('[name=tasa]')?.value) || null;
     function actualizarTotales() {
         panel.querySelector('#venta-total').textContent = fmt(total());
+        const t = tasaVenta();
+        panel.querySelector('#venta-total-bs').textContent = t ? `≈ ${fmtBs(total() * t)}` : '';
         lineas.forEach((l, i) => {
             const el = panel.querySelector(`[data-subtotal="${i}"]`);
             if (el) el.textContent = fmt((Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0));
@@ -327,58 +343,93 @@ export function openVentaModal(id, prefill = {}) {
         panel.querySelector(`[data-producto="${lineas.length - 1}"]`)?.focus();
     });
     panel.querySelectorAll('[data-abono]').forEach(btn => btn.addEventListener('click', () => {
-        panel.querySelector('[name=abono_monto]').value = (total() * Number(btn.dataset.abono)).toFixed(2);
+        const enBs = panel.querySelector('[name=abono_moneda]')?.value === 'VES';
+        if (enBs && !tasaVenta()) { toast('Escribe la tasa para calcular el abono en Bs.', 'aviso'); return; }
+        panel.querySelector('[name=abono_monto]').value = (total() * Number(btn.dataset.abono) * (enBs ? tasaVenta() : 1)).toFixed(2);
     }));
+    panel.querySelector('[name=tasa]')?.addEventListener('input', actualizarTotales);
     pintarLineas();
 }
 
 // ---------------- Abonos ----------------
 
 export function openPagosModal(ventaId) {
+    const bs = Store.bsActivo();
+    const local = esc(Store.state.config.moneda_local || 'Bs');
     const pintar = () => {
         const v = Store.state.ventas.find(x => x.id === ventaId);
         if (!v) { closeModal(); return; }
         const saldo = Store.saldoVenta(v);
+        const tasa = Store.tasaDia();
+        const enBs = (n) => (bs && tasa ? `<p class="text-[11px] opacity-75">${fmtBs(n * tasa)}</p>` : '');
         const body = `
             <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Total</p><p class="font-bold text-slate-800">${fmt(Store.montoVenta(v))}</p></div>
-                <div class="p-3 rounded-xl bg-emerald-50"><p class="text-xs text-emerald-700">Abonado</p><p class="font-bold text-emerald-700">${fmt(Store.pagadoVenta(v))}</p></div>
-                <div class="p-3 rounded-xl ${saldo > 0 ? 'bg-rose-50' : 'bg-emerald-50'}"><p class="text-xs ${saldo > 0 ? 'text-rose-700' : 'text-emerald-700'}">Saldo</p><p class="font-black ${saldo > 0 ? 'text-rose-700' : 'text-emerald-700'}">${fmt(saldo)}</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Total</p><p class="font-bold text-slate-800">${fmt(Store.montoVenta(v))}</p>${enBs(Store.montoVenta(v))}</div>
+                <div class="p-3 rounded-xl bg-emerald-50 text-emerald-700"><p class="text-xs">Abonado</p><p class="font-bold">${fmt(Store.pagadoVenta(v))}</p></div>
+                <div class="p-3 rounded-xl ${saldo > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}"><p class="text-xs">Saldo</p><p class="font-black">${fmt(saldo)}</p>${saldo > 0 ? enBs(saldo) : ''}</div>
             </div>
+            ${bs && tasa && saldo > 0 ? `<p class="text-xs text-slate-400 text-center -mt-2">Equivalentes en ${local} a la tasa del día (${fmtTasa(tasa)}).</p>` : ''}
             <p class="text-sm text-slate-500"><b class="text-slate-700">${esc(Store.nombreClienteVenta(v))}</b> · ${esc(detalleTexto(v))}</p>
             <div>
                 ${etiqueta('Abonos registrados')}
                 <ul class="divide-y divide-slate-100 border border-slate-100 rounded-lg">${v.pagos.map(p => `
                     <li class="flex items-center justify-between px-3 py-2 text-sm">
-                        <span><span class="text-slate-500">${fmtFecha(p.fecha)}</span> · ${esc(p.metodo)}${p.nota ? ` <span class="text-xs text-slate-400">(${esc(p.nota)})</span>` : ''}</span>
+                        <span><span class="text-slate-500">${fmtFecha(p.fecha)}</span> · ${esc(p.metodo)}${p.moneda === 'VES' && p.monto_original ? ` <span class="text-xs text-slate-500">(${fmtBs(p.monto_original)} a ${fmtTasa(p.tasa)})</span>` : ''}${p.nota ? ` <span class="text-xs text-slate-400">${esc(p.nota)}</span>` : ''}</span>
                         <span class="flex items-center gap-2"><b>${fmt(p.monto)}</b><button type="button" data-borrar-pago="${p.id}" class="text-slate-300 hover:text-rose-500" aria-label="Eliminar abono"><i class="fa-solid fa-xmark"></i></button></span>
                     </li>`).join('') || '<li class="px-3 py-3 text-sm text-slate-400 text-center">Sin abonos todavía</li>'}
                 </ul>
             </div>
             ${saldo > 0 ? `
-            <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p class="text-xs font-bold text-slate-500 uppercase mb-2">Registrar abono</p>
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                <p class="text-xs font-bold text-slate-500 uppercase">Registrar abono</p>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <input name="fecha" type="date" value="${hoyISO()}" required class="${claseInput}" aria-label="Fecha">
-                    <input name="monto" type="number" step="0.01" min="0.01" max="${saldo}" value="${saldo.toFixed(2)}" required class="${claseInput}" aria-label="Monto">
+                    ${bs ? `<select name="moneda" class="${claseInput}" aria-label="Moneda"><option value="USD">Paga en ${esc(Store.state.config.moneda || '$')}</option><option value="VES">Paga en ${local}</option></select>` : ''}
+                    <input name="monto" type="number" step="0.01" min="0.01" value="${saldo.toFixed(2)}" required class="${claseInput}" aria-label="Monto">
                     <select name="metodo" class="${claseInput}" aria-label="Método">${Store.METODOS_PAGO.map(m => `<option>${m}</option>`).join('')}</select>
-                    <input name="nota" placeholder="Nota (ref.)" class="${claseInput}" aria-label="Nota">
                 </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div id="pago-tasa" class="hidden"><input name="tasa" type="number" step="any" min="0" value="${tasa || ''}" placeholder="Tasa Bs por $" class="${claseInput}" aria-label="Tasa"></div>
+                    <input name="nota" placeholder="Nota (n.º de referencia)" class="${claseInput}" aria-label="Nota">
+                </div>
+                <p id="pago-conversion" class="text-xs text-slate-500"></p>
             </div>` : '<p class="text-sm text-emerald-700 text-center"><i class="fa-solid fa-circle-check mr-1"></i>Esta venta está pagada por completo.</p>'}
             <div class="flex gap-2 justify-center">
                 <button type="button" data-recibo class="text-sm text-indigo-600 hover:underline"><i class="fa-solid fa-file-pdf mr-1"></i>Descargar recibo</button>
             </div>`;
         const { panel } = openModal(`Abonos de ${folioVenta(v)}`, body, async (formData) => {
+            const moneda = formData.get('moneda') || 'USD';
+            const datos = { fecha: formData.get('fecha'), metodo: formData.get('metodo'), nota: formData.get('nota'), moneda };
+            if (moneda === 'VES') Object.assign(datos, { monto_original: Number(formData.get('monto')), tasa: Number(formData.get('tasa')) });
+            else datos.monto = Number(formData.get('monto'));
             try {
-                await Store.addPago(ventaId, {
-                    fecha: formData.get('fecha'), monto: Number(formData.get('monto')),
-                    metodo: formData.get('metodo'), nota: formData.get('nota'),
-                });
+                await Store.addPago(ventaId, datos);
                 toast('Abono registrado.');
                 refrescar();
                 pintar();
             } catch (e) { handleError(e); }
         }, { textoGuardar: 'Registrar abono', sinGuardar: saldo <= 0 });
+
+        // Pago en bolívares: el monto se escribe en Bs y se muestra cuánto equivale en $.
+        const selMoneda = panel.querySelector('[name=moneda]');
+        const inputMonto = panel.querySelector('[name=monto]');
+        const inputTasa = panel.querySelector('[name=tasa]');
+        const conversion = () => {
+            if (!selMoneda) return;
+            const enBs = selMoneda.value === 'VES';
+            panel.querySelector('#pago-tasa').classList.toggle('hidden', !enBs);
+            const t = Number(inputTasa.value);
+            panel.querySelector('#pago-conversion').textContent = enBs
+                ? (t > 0 ? `${fmtBs(Number(inputMonto.value) || 0)} ÷ ${fmtTasa(t)} = ${fmt((Number(inputMonto.value) || 0) / t)} se abonarán a la venta.` : 'Escribe la tasa para convertir el pago.')
+                : '';
+        };
+        selMoneda?.addEventListener('change', () => {
+            const t = Number(inputTasa.value);
+            inputMonto.value = selMoneda.value === 'VES' ? (t ? (saldo * t).toFixed(2) : '') : saldo.toFixed(2);
+            conversion();
+        });
+        inputMonto?.addEventListener('input', conversion);
+        inputTasa?.addEventListener('input', conversion);
         panel.querySelectorAll('[data-borrar-pago]').forEach(btn => btn.addEventListener('click', async () => {
             if (!window.confirm('¿Eliminar este abono?')) return;
             try { await Store.deletePago(btn.dataset.borrarPago); toast('Abono eliminado.'); refrescar(); pintar(); } catch (e) { handleError(e); }

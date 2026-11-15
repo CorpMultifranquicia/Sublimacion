@@ -6,7 +6,8 @@
  */
 
 import { Store } from './store.js';
-import { fmt, fmtNum, fmtFecha, hoyISO, sumarDias, folioVenta, folioCotizacion, configurarMoneda } from './util.js';
+import { fmt, fmtBs, fmtTasa, fmtNum, fmtFecha, hoyISO, sumarDias, folioVenta, folioCotizacion, configurarMoneda } from './util.js';
+import { elegirMonedaDocumento } from './vistas/tasa.js';
 
 // Colores de marca (RGB)
 const AZUL_MARINO = [27, 42, 128];
@@ -41,6 +42,24 @@ function nombreArchivo(...partes) {
     return partes.filter(Boolean).join('_')
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') + '.pdf';
+}
+
+/**
+ * Formato de dinero según la moneda elegida para el documento.
+ *   base:  todo en $            local: todo convertido a Bs            ambas: $ y totales también en Bs
+ */
+function formatoMoneda({ moneda = 'base', tasa = null } = {}, cfg) {
+    const enBs = moneda === 'local' && tasa;
+    return {
+        moneda,
+        tasa,
+        m: (n) => (enBs ? fmtBs(n * tasa) : fmt(n)),
+        bs: (n) => fmtBs(n * tasa),
+        conBs: moneda === 'ambas' && !!tasa,
+        nota: tasa && moneda !== 'base'
+            ? `Tasa de cambio aplicada: ${cfg.moneda_local || 'Bs'} ${fmtTasa(tasa)} por 1 ${cfg.moneda || '$'}.${enBs ? ` Precios base en ${cfg.moneda || '$'}.` : ''}`
+            : null,
+    };
 }
 
 // ---------------- Bloques ----------------
@@ -148,7 +167,7 @@ function encabezadoTabla(doc, y) {
 }
 
 /** Tabla de productos con descripciones que se ajustan en varias líneas y saltos de página. */
-function tablaItems(doc, y, items) {
+function tablaItems(doc, y, items, M) {
     y = encabezadoTabla(doc, y);
     items.forEach((it, i) => {
         fuente(doc, 9.5, 'normal', TEXTO);
@@ -168,9 +187,9 @@ function tablaItems(doc, y, items) {
         fuente(doc, 9.5, 'normal', TEXTO);
         doc.text(lineas, COLUMNAS.desc, base);
         doc.text(fmtNum(it.cantidad), COLUMNAS.cant, base, { align: 'right' });
-        doc.text(fmt(it.precio_unitario), COLUMNAS.precio, base, { align: 'right' });
+        doc.text(M.m(it.precio_unitario), COLUMNAS.precio, base, { align: 'right' });
         fuente(doc, 9.5, 'bold', TEXTO);
-        doc.text(fmt(it.cantidad * it.precio_unitario), COLUMNAS.subtotal, base, { align: 'right' });
+        doc.text(M.m(it.cantidad * it.precio_unitario), COLUMNAS.subtotal, base, { align: 'right' });
         y += alto;
         doc.setDrawColor(226, 232, 240);
         doc.setLineWidth(0.2);
@@ -189,7 +208,7 @@ function espacio(doc, y, alto) {
 }
 
 /** Bloque de totales a la derecha. filas: [[etiqueta, valor, {negrita, rgb}]] */
-function totales(doc, y, total, filasExtra = []) {
+function totales(doc, y, totalTxt, filasExtra = []) {
     const x = 118;
     y = espacio(doc, y + 4, 14 + filasExtra.length * 6.5);
     doc.setFillColor(...AZUL_MARINO);
@@ -197,11 +216,11 @@ function totales(doc, y, total, filasExtra = []) {
     fuente(doc, 10, 'bold', [255, 255, 255]);
     doc.text('TOTAL', x + 4, y + 6.7);
     fuente(doc, 13, 'bold', [255, 255, 255]);
-    doc.text(fmt(total), DERECHA - 4, y + 6.9, { align: 'right' });
+    doc.text(totalTxt, DERECHA - 4, y + 6.9, { align: 'right' });
     y += 10;
     filasExtra.forEach(([etiqueta, valor, opc = {}]) => {
         y += 6.5;
-        fuente(doc, 10, opc.negrita ? 'bold' : 'normal', opc.rgb || GRIS);
+        fuente(doc, opc.chico ? 9 : 10, opc.negrita ? 'bold' : 'normal', opc.rgb || GRIS);
         doc.text(etiqueta, x + 4, y);
         doc.text(valor, DERECHA - 4, y, { align: 'right' });
     });
@@ -219,6 +238,15 @@ function seccionTexto(doc, y, titulo, texto, ancho = DERECHA - PAGINA.margen) {
     fuente(doc, 9, 'normal', TEXTO);
     doc.text(lineas, PAGINA.margen, y + 5);
     return y + 5 + lineas.length * 4.3 + 3;
+}
+
+/** Línea que indica la tasa usada cuando el documento muestra bolívares. */
+function notaTasa(doc, y, M) {
+    if (!M.nota) return y;
+    y = espacio(doc, y, 8);
+    fuente(doc, 8.5, 'italic', GRIS);
+    doc.text(M.nota, DERECHA, y + 2, { align: 'right' });
+    return y + 8;
 }
 
 /** Pie en todas las páginas: mensaje, aviso de documento no fiscal y numeración. */
@@ -240,8 +268,9 @@ function pieDePagina(doc, texto) {
 
 // ---------------- Documentos ----------------
 
-function construirRecibo(venta, cliente, cfg) {
+function construirRecibo(venta, cliente, cfg, opciones) {
     const doc = nuevoDoc();
+    const M = formatoMoneda(opciones, cfg);
     const total = Store.montoVenta(venta);
     const pagado = Store.pagadoVenta(venta);
     const saldo = Math.max(0, Math.round((total - pagado) * 100) / 100);
@@ -252,12 +281,14 @@ function construirRecibo(venta, cliente, cfg) {
         ...(venta.fecha_entrega ? [['Entrega:', fmtFecha(venta.fecha_entrega)]] : []),
     ]);
     y = bloqueCliente(doc, y, cliente || {}, [['Estado del pedido:', venta.estado]]);
-    y = tablaItems(doc, y, venta.detalle.map(d => ({ nombre: d.producto_nombre, cantidad: d.cantidad, precio_unitario: d.precio_unitario })));
+    y = tablaItems(doc, y, venta.detalle.map(d => ({ nombre: d.producto_nombre, cantidad: d.cantidad, precio_unitario: d.precio_unitario })), M);
 
     const yTabla = y;
-    y = totales(doc, y, total, [
-        ['Abonado', fmt(pagado), { rgb: VERDE }],
-        ['Saldo pendiente', fmt(saldo), { negrita: true, rgb: saldo > 0 ? ROJO : VERDE }],
+    y = totales(doc, y, M.m(total), [
+        ...(M.conBs ? [['Total en ' + (cfg.moneda_local || 'Bs'), M.bs(total), { negrita: true, rgb: AZUL_MARINO }]] : []),
+        ['Abonado', M.m(pagado), { rgb: VERDE }],
+        ['Saldo pendiente', M.m(saldo), { negrita: true, rgb: saldo > 0 ? ROJO : VERDE }],
+        ...(M.conBs && saldo > 0 ? [['Saldo en ' + (cfg.moneda_local || 'Bs'), M.bs(saldo), { negrita: true, rgb: ROJO }]] : []),
     ]);
 
     // A la izquierda de los totales: detalle de abonos o sello de pagado.
@@ -268,8 +299,10 @@ function construirRecibo(venta, cliente, cfg) {
         yIzq += 4.5;
         venta.pagos.slice(0, 6).forEach(p => {
             fuente(doc, 8.5, 'normal', TEXTO);
-            doc.text(`${fmtFecha(p.fecha)}  ·  ${p.metodo}`, PAGINA.margen, yIzq);
-            doc.text(fmt(p.monto), 100, yIzq, { align: 'right' });
+            // Pagos en Bs: se muestra lo que entregó el cliente y la tasa con que se convirtió.
+            const enBs = p.moneda === 'VES' && p.monto_original;
+            doc.text(`${fmtFecha(p.fecha)}  ·  ${p.metodo}${enBs ? `  ·  ${fmtBs(p.monto_original)} a ${fmtTasa(p.tasa)}` : ''}`, PAGINA.margen, yIzq);
+            doc.text(M.moneda === 'local' && enBs ? fmtBs(p.monto_original) : M.m(p.monto), 108, yIzq, { align: 'right' });
             yIzq += 4.2;
         });
         if (venta.pagos.length > 6) { fuente(doc, 8, 'italic', GRIS); doc.text(`y ${venta.pagos.length - 6} abono(s) más`, PAGINA.margen, yIzq); yIzq += 4.2; }
@@ -284,13 +317,15 @@ function construirRecibo(venta, cliente, cfg) {
         yIzq = ySello + 13;
     }
     y = Math.max(y, yIzq) + 4;
+    y = notaTasa(doc, y, M);
     y = seccionTexto(doc, y, 'Notas del pedido', venta.notas);
     pieDePagina(doc, cfg.recibo_pie);
-    return { doc, nombre: nombreArchivo('Recibo', folioVenta(venta), cliente?.nombre) };
+    return { doc, nombre: nombreArchivo('Recibo', folioVenta(venta), cliente?.nombre, M.moneda === 'local' ? 'Bs' : '') };
 }
 
-function construirCotizacion(cot, cfg) {
+function construirCotizacion(cot, cfg, opciones) {
     const doc = nuevoDoc();
+    const M = formatoMoneda(opciones, cfg);
     const total = Store.montoCotizacion(cot);
     const vence = sumarDias(cot.fecha, cot.validez_dias);
     const cliente = Store.state.clientes.find(c => c.id === cot.cliente_id) || { nombre: cot.cliente_nombre };
@@ -301,24 +336,29 @@ function construirCotizacion(cot, cfg) {
         ['Válida hasta:', fmtFecha(vence)],
     ]);
     y = bloqueCliente(doc, y, cliente, [['Validez:', `${cot.validez_dias} días`]]);
-    y = tablaItems(doc, y, cot.items.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad, precio_unitario: i.precio_unitario })));
-    y = totales(doc, y, total) + 4;
+    y = tablaItems(doc, y, cot.items.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad, precio_unitario: i.precio_unitario })), M);
+    y = totales(doc, y, M.m(total), M.conBs ? [['Total en ' + (cfg.moneda_local || 'Bs'), M.bs(total), { negrita: true, rgb: AZUL_MARINO }]] : []) + 2;
+    y = notaTasa(doc, y, M);
     y = seccionTexto(doc, y, 'Notas', cot.notas);
     y = seccionTexto(doc, y, 'Condiciones', cfg.cotizacion_condiciones);
     pieDePagina(doc, cfg.negocio_telefono ? `Para confirmar tu pedido escríbenos al ${cfg.negocio_telefono}` : 'Gracias por tu interés');
-    return { doc, nombre: nombreArchivo('Cotizacion', folioCotizacion(cot), cliente?.nombre) };
+    return { doc, nombre: nombreArchivo('Cotizacion', folioCotizacion(cot), cliente?.nombre, M.moneda === 'local' ? 'Bs' : '') };
 }
 
 // ---------------- API pública ----------------
 
 export async function generarReciboPDF(venta) {
+    const opciones = await elegirMonedaDocumento(venta.tasa);
+    if (!opciones) return;
     const cliente = Store.state.clientes.find(c => c.id === venta.cliente_id);
-    const { doc, nombre } = construirRecibo(venta, cliente, Store.state.config);
+    const { doc, nombre } = construirRecibo(venta, cliente, Store.state.config, opciones);
     doc.save(nombre);
 }
 
 export async function generarCotizacionPDF(cot) {
-    const { doc, nombre } = construirCotizacion(cot, Store.state.config);
+    const opciones = await elegirMonedaDocumento(cot.tasa);
+    if (!opciones) return;
+    const { doc, nombre } = construirCotizacion(cot, Store.state.config, opciones);
     doc.save(nombre);
 }
 
@@ -331,22 +371,28 @@ const EJEMPLO_ITEMS = [
 
 function abrirVistaPrevia(doc, cfgOriginal) {
     window.open(doc.output('bloburl'), '_blank');
-    configurarMoneda(cfgOriginal.moneda);
+    configurarMoneda(cfgOriginal.moneda, cfgOriginal.moneda_local);
+}
+
+/** Las vistas previas usan la moneda preferida de Configuración y la tasa del día (o una de ejemplo). */
+function opcionesVistaPrevia(cfg) {
+    const tasa = Number(cfg.tasa_dia) || 36.5;
+    return cfg.bs_activo === '1' ? { moneda: cfg.documentos_moneda || 'ambas', tasa } : { moneda: 'base', tasa: null };
 }
 
 export async function vistaPreviaRecibo(cfg) {
-    configurarMoneda(cfg.moneda);
+    configurarMoneda(cfg.moneda, cfg.moneda_local);
     const venta = {
         folio: 1, fecha: hoyISO(), fecha_entrega: sumarDias(hoyISO(), 3), estado: 'Imprimiendo', notas: 'Ejemplo: tazas con la foto que envió por WhatsApp. Franelas: 3 con logo dorado y 3 plateado.',
-        detalle: EJEMPLO_ITEMS.map(i => ({ ...i })), pagos: [{ fecha: hoyISO(), metodo: 'Pago móvil', monto: 100 }],
+        detalle: EJEMPLO_ITEMS.map(i => ({ ...i })), pagos: [{ fecha: hoyISO(), metodo: 'Pago móvil', monto: 100, moneda: 'VES', monto_original: 100 * (Number(cfg.tasa_dia) || 36.5), tasa: Number(cfg.tasa_dia) || 36.5 }],
     };
-    const { doc } = construirRecibo(venta, { nombre: 'Cliente de ejemplo', telefono: '0414-1234567', email: 'cliente@ejemplo.com' }, cfg);
+    const { doc } = construirRecibo(venta, { nombre: 'Cliente de ejemplo', telefono: '0414-1234567', email: 'cliente@ejemplo.com' }, cfg, opcionesVistaPrevia(cfg));
     abrirVistaPrevia(doc, Store.state.config);
 }
 
 export async function vistaPreviaCotizacion(cfg) {
-    configurarMoneda(cfg.moneda);
+    configurarMoneda(cfg.moneda, cfg.moneda_local);
     const cot = { folio: 1, fecha: hoyISO(), validez_dias: Number(cfg.cotizacion_validez_dias) || 15, cliente_nombre: 'Cliente de ejemplo', notas: 'Ejemplo: tiempo de entrega 5 días hábiles desde la aprobación del diseño.', items: EJEMPLO_ITEMS };
-    const { doc } = construirCotizacion(cot, cfg);
+    const { doc } = construirCotizacion(cot, cfg, opcionesVistaPrevia(cfg));
     abrirVistaPrevia(doc, Store.state.config);
 }

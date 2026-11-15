@@ -12,6 +12,7 @@ import { Store } from './store.js';
 import { esc, iniciales } from './util.js';
 import { handleError } from './ui.js';
 import { registrarRefresco, irAPagina } from './vistas/comun.js';
+import { chipTasa, openTasaModal } from './vistas/tasa.js';
 
 import { vista as inicio } from './vistas/inicio.js';
 import { vista as ventas } from './vistas/ventas.js';
@@ -93,20 +94,25 @@ function showTab(id) {
 
     document.getElementById('header-title').textContent = v.titulo;
     document.getElementById('header-subtitle').textContent = v.subtitulo;
-    document.getElementById('header-actions').innerHTML = (v.acciones || []).map(a => {
-        const cls = a.variante === 'secundario'
-            ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200';
-        return `<button onclick="App.${a.fn}()" class="${cls} px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"><i class="fa-solid ${a.icono}"></i><span class="hidden sm:inline">${a.texto}</span></button>`;
-    }).join('');
-
     toggleSidebar(false);
     document.getElementById('contenido').scrollTop = 0;
     refrescar();
 }
 
+/** Botones del encabezado: tasa del día + acciones de la sección. */
+function renderAcciones() {
+    const v = VISTAS.find(x => x.id === actual);
+    document.getElementById('header-actions').innerHTML = chipTasa() + (v.acciones || []).map(a => {
+        const cls = a.variante === 'secundario'
+            ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200';
+        return `<button onclick="App.${a.fn}()" class="${cls} px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"><i class="fa-solid ${a.icono}"></i><span class="hidden sm:inline">${a.texto}</span></button>`;
+    }).join('');
+}
+
 function refrescar() {
     renderNav();
+    renderAcciones();
     const v = VISTAS.find(x => x.id === actual);
     try {
         v.render(contenedor(v.id));
@@ -138,7 +144,7 @@ async function iniciar() {
 
 registrarRefresco(refrescar);
 
-window.App = Object.assign({ showTab, toggleSidebar, iniciar, irAPagina },
+window.App = Object.assign({ showTab, toggleSidebar, iniciar, irAPagina, openTasaModal },
     ...VISTAS.map(v => v.handlers || {}));
 
 iniciar();

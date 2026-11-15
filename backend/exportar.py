@@ -107,13 +107,14 @@ def libro_excel(estado, desde, hasta, movimientos):
         ('Folio', None, 11), ('Fecha', FECHA, 12), ('Cliente', None, 24), ('Producto', None, 28),
         ('Cantidad', '#,##0.##', 10), ('Precio unit.', MONEDA, 13), ('Subtotal', MONEDA, 13),
         ('Costo unit.', COSTO, 13), ('Costo total', MONEDA, 13), ('Utilidad', MONEDA, 13), ('Margen', PORC, 9),
-        ('Estado', None, 14), ('Entrega', FECHA, 12),
+        ('Estado', None, 14), ('Entrega', FECHA, 12), ('Tasa Bs/$', COSTO, 11), ('Subtotal Bs', MONEDA, 15),
     ], [
         [_folio('VEN', v['folio']), _fecha(v['fecha']), nombre_cliente(v['cliente_id']), d['producto_nombre'],
          d['cantidad'], d['precio_unitario'], d['cantidad'] * d['precio_unitario'], d['costo_unitario'],
          d['cantidad'] * d['costo_unitario'], d['cantidad'] * (d['precio_unitario'] - d['costo_unitario']),
          (1 - d['costo_unitario'] / d['precio_unitario']) if d['precio_unitario'] else 0,
-         v['estado'], _fecha(v['fecha_entrega'])]
+         v['estado'], _fecha(v['fecha_entrega']), v.get('tasa'),
+         d['cantidad'] * d['precio_unitario'] * v['tasa'] if v.get('tasa') else None]
         for v in sorted(ventas, key=lambda v: v['folio']) for d in v['detalle']
     ])
 
@@ -133,9 +134,10 @@ def libro_excel(estado, desde, hasta, movimientos):
 
     # --- Cobros ---
     _hoja(libro, 'Cobros', 'tCobros', [
-        ('Fecha', FECHA, 12), ('Venta', None, 11), ('Cliente', None, 24), ('Monto', MONEDA, 13),
-        ('Método', None, 16), ('Nota', None, 30),
-    ], [[_fecha(p['fecha']), _folio('VEN', v['folio']), nombre_cliente(v['cliente_id']), p['monto'], p['metodo'], p['nota']]
+        ('Fecha', FECHA, 12), ('Venta', None, 11), ('Cliente', None, 24), ('Monto $', MONEDA, 13),
+        ('Método', None, 16), ('Pagó en', None, 9), ('Monto Bs', MONEDA, 14), ('Tasa', COSTO, 11), ('Nota', None, 30),
+    ], [[_fecha(p['fecha']), _folio('VEN', v['folio']), nombre_cliente(v['cliente_id']), p['monto'], p['metodo'],
+         'Bs' if p.get('moneda') == 'VES' else '$', p.get('monto_original'), p.get('tasa'), p['nota']]
         for v, p in sorted(pagos, key=lambda x: x[1]['fecha'])])
 
     # --- Cuentas por cobrar (todas las ventas con saldo hasta la fecha final) ---

@@ -155,6 +155,16 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
         db.guardar_config(cuerpo())
         return ok()
 
+    @app.post('/api/tasas')
+    def guardar_tasa():
+        db.guardar_tasa(cuerpo())
+        return ok()
+
+    @app.delete('/api/tasas/<fecha>')
+    def borrar_tasa(fecha):
+        db.borrar_tasa(fecha)
+        return ok()
+
     @app.get('/api/respaldo')
     def descargar_respaldo():
         """Descarga una copia completa de la base de datos."""

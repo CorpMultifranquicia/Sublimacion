@@ -4,7 +4,7 @@
  */
 
 import { Store } from '../store.js';
-import { esc, fmtFecha, diasEntre, hoyISO } from '../util.js';
+import { esc, fmtFecha, fmtTasa, diasEntre, hoyISO } from '../util.js';
 import { toast, handleError } from '../ui.js';
 import { refrescar, tarjeta, etiqueta, claseInput } from './comun.js';
 import { vistaPreviaRecibo, vistaPreviaCotizacion } from '../pdf.js';
@@ -24,6 +24,13 @@ async function prepararLogo(file) {
     canvas.height = Math.round(bitmap.height * escala);
     canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/png');
+}
+
+/** Lee el formulario; las casillas desmarcadas no viajan en FormData, por eso se agregan aparte. */
+function datosFormulario(form) {
+    const datos = Object.fromEntries(new FormData(form).entries());
+    datos.bs_activo = form.querySelector('[name=bs_activo]').checked ? '1' : '0';
+    return datos;
 }
 
 function campo(nombre, titulo, valor, extra = '') {
@@ -72,6 +79,24 @@ function render(el) {
                 <div>${etiqueta('Condiciones de las cotizaciones', 'cfg-cond')}<textarea id="cfg-cond" name="cotizacion_condiciones" rows="3" class="${claseInput}">${esc(c.cotizacion_condiciones)}</textarea></div>
                 <div>${etiqueta('Mensaje al pie del recibo', 'cfg-pie')}<input id="cfg-pie" name="recibo_pie" value="${esc(c.recibo_pie)}" class="${claseInput}"></div>
             </div>`)}
+            ${tarjeta(`<div class="p-6 space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="font-bold text-slate-800"><i class="fa-solid fa-coins text-amber-500 mr-2"></i>Bolívares y tasa del día</h3>
+                    <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer"><input type="checkbox" name="bs_activo" value="1" ${c.bs_activo === '1' ? 'checked' : ''} class="w-4 h-4 accent-indigo-600"> Activado</label>
+                </div>
+                <p class="text-sm text-slate-600">Los precios se guardan en <b>${esc(c.moneda || '$')}</b>. Con la tasa del día, SubliApp muestra los equivalentes en bolívares, permite registrar pagos en bolívares y genera presupuestos y recibos en bolívares o en ambas monedas.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    ${campo('moneda_local', 'Símbolo moneda local', c.moneda_local, 'required')}
+                    <div>${etiqueta('Moneda de los PDF (por defecto)', 'cfg-docmon')}<select id="cfg-docmon" name="documentos_moneda" class="${claseInput}">
+                        ${[['ambas', 'Ambas monedas'], ['base', `Solo ${esc(c.moneda || '$')}`], ['local', `Solo ${esc(c.moneda_local || 'Bs')}`]].map(([v, t]) => `<option value="${v}" ${c.documentos_moneda === v ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select></div>
+                    <div><p class="text-xs font-bold text-slate-500 uppercase mb-1">Tasa del día</p>
+                        <button type="button" onclick="App.openTasaModal()" class="w-full px-3 py-2 rounded-lg border ${Store.tasaEsDeHoy() ? 'border-slate-200' : 'border-amber-300 bg-amber-50'} text-sm text-left hover:bg-slate-50">
+                            ${Store.tasaDia() ? `<b>${esc(c.moneda_local || 'Bs')} ${fmtTasa(Store.tasaDia())}</b> <span class="text-xs text-slate-400">(${fmtFecha(c.tasa_fecha)})</span>` : '<span class="text-amber-700">Cargar tasa</span>'}
+                            <i class="fa-solid fa-pen float-right mt-1 text-slate-400"></i></button></div>
+                </div>
+                <p class="text-xs text-slate-400">Al descargar un PDF siempre puedes elegir la moneda y la tasa; aquí defines la opción que viene marcada.</p>
+            </div>`)}
             <div class="flex flex-wrap gap-3 justify-end">
                 <button type="button" id="cfg-prev-recibo" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-eye mr-1"></i>Vista previa del recibo</button>
                 <button type="button" id="cfg-prev-cot" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-eye mr-1"></i>Vista previa de cotización</button>
@@ -98,7 +123,7 @@ function render(el) {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!form.checkValidity()) { toast('Revisa los campos obligatorios.', 'aviso'); form.querySelector(':invalid')?.focus(); return; }
-        const datos = Object.fromEntries(new FormData(form).entries());
+        const datos = datosFormulario(form);
         if (logoPendiente !== null) datos.logo = logoPendiente;
         try {
             await Store.guardarConfig(datos);
@@ -113,17 +138,17 @@ function render(el) {
         try {
             logoPendiente = await prepararLogo(file);
             // Se guarda también lo escrito en el formulario para no perderlo al redibujar.
-            await Store.guardarConfig({ ...Object.fromEntries(new FormData(form).entries()), logo: logoPendiente });
+            await Store.guardarConfig({ ...datosFormulario(form), logo: logoPendiente });
             logoPendiente = null;
             refrescar();
             toast('Logo actualizado.');
         } catch (err) { handleError(err); }
     });
     el.querySelector('#cfg-quitar-logo')?.addEventListener('click', async () => {
-        try { await Store.guardarConfig({ ...Object.fromEntries(new FormData(form).entries()), logo: '' }); refrescar(); toast('Logo quitado.'); } catch (err) { handleError(err); }
+        try { await Store.guardarConfig({ ...datosFormulario(form), logo: '' }); refrescar(); toast('Logo quitado.'); } catch (err) { handleError(err); }
     });
     // Las vistas previas usan lo que está escrito en el formulario aunque no se haya guardado.
-    const configFormulario = () => ({ ...Store.state.config, ...Object.fromEntries(new FormData(form).entries()) });
+    const configFormulario = () => ({ ...Store.state.config, ...datosFormulario(form) });
     el.querySelector('#cfg-prev-recibo').addEventListener('click', () => vistaPreviaRecibo(configFormulario()).catch(handleError));
     el.querySelector('#cfg-prev-cot').addEventListener('click', () => vistaPreviaCotizacion(configFormulario()).catch(handleError));
     el.querySelector('#cfg-respaldo').addEventListener('click', () => setTimeout(() => Store.load().then(refrescar), 1500));

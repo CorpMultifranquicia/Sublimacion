@@ -9,13 +9,14 @@ Para cambiar la estructura en el futuro:
   1. Actualiza ESQUEMA (así quedan las bases nuevas).
   2. Agrega una función migrar_a_N al final y súmala a MIGRACIONES
      (así se actualizan las bases que ya tienen datos). Sube VERSION.
+     Escribe el SQL completo dentro de la migración: nunca reutilices ESQUEMA.
 Antes de migrar se guarda una copia en respaldos/antes_de_migrar_vN.db.
 """
 
 import sqlite3
 from pathlib import Path
 
-VERSION = 2
+VERSION = 3
 
 ESQUEMA = """
 CREATE TABLE insumos (
@@ -65,6 +66,7 @@ CREATE TABLE ventas (
     entregado_en       TEXT,          -- cuándo pasó a "Entregado"
     notas              TEXT,
     estado_produccion  TEXT NOT NULL DEFAULT 'Por Diseñar',
+    tasa               REAL,          -- Bs por $ al momento de vender (para el recibo en Bs)
     created_at         TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -82,9 +84,12 @@ CREATE TABLE pagos (
     id          TEXT PRIMARY KEY,
     venta_id    TEXT NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
     fecha       TEXT NOT NULL,
-    monto       REAL NOT NULL,
+    monto       REAL NOT NULL,               -- siempre en la moneda base ($)
     metodo      TEXT NOT NULL,
     nota        TEXT,
+    moneda      TEXT NOT NULL DEFAULT 'USD', -- moneda en que pagó el cliente: USD o VES
+    monto_original REAL,                     -- lo que entregó en esa moneda (p. ej. Bs 3.650)
+    tasa        REAL,                        -- Bs por $ usada para convertir
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -142,6 +147,7 @@ CREATE TABLE cotizaciones (
     notas           TEXT,
     estado          TEXT NOT NULL DEFAULT 'Pendiente',  -- Pendiente / Convertida
     venta_id        TEXT REFERENCES ventas(id) ON DELETE SET NULL,
+    tasa            REAL,                               -- Bs por $ con que se cotizó
     created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -164,6 +170,12 @@ CREATE TABLE gastos (
     created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Historial de la tasa de cambio (Bs por $) cargada a mano, una por día.
+CREATE TABLE tasas (
+    fecha  TEXT PRIMARY KEY,
+    tasa   REAL NOT NULL
+);
+
 CREATE TABLE configuracion (
     clave  TEXT PRIMARY KEY,
     valor  TEXT
@@ -180,19 +192,71 @@ INSERT INTO contadores (nombre, valor) VALUES ('ventas', 0), ('compras', 0), ('c
 
 # ---------- Migraciones ----------
 
-def _definicion(tabla):
-    """Extrae de ESQUEMA el CREATE TABLE de una tabla (para no duplicar definiciones)."""
-    inicio = ESQUEMA.index(f'CREATE TABLE {tabla} (')
-    fin = ESQUEMA.index(');', inicio) + 2
-    return ESQUEMA[inicio:fin]
+# IMPORTANTE: las migraciones quedan "congeladas": escriben el SQL tal como era en
+# su versión y nunca leen ESQUEMA, porque ESQUEMA cambia con cada versión nueva.
 
+TABLAS_NUEVAS_V2 = """
+CREATE TABLE pagos (
+    id          TEXT PRIMARY KEY,
+    venta_id    TEXT NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    fecha       TEXT NOT NULL,
+    monto       REAL NOT NULL,
+    metodo      TEXT NOT NULL,
+    nota        TEXT,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE movimientos_inventario (
+    id                TEXT PRIMARY KEY,
+    insumo_id         TEXT NOT NULL REFERENCES insumos(id) ON DELETE CASCADE,
+    fecha             TEXT NOT NULL,
+    tipo              TEXT NOT NULL,
+    cantidad          REAL NOT NULL,
+    costo_unitario    REAL NOT NULL DEFAULT 0,
+    stock_resultante  REAL NOT NULL,
+    referencia        TEXT,
+    ref_tipo          TEXT,
+    ref_id            TEXT,
+    nota              TEXT,
+    created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE cotizaciones (
+    id              TEXT PRIMARY KEY,
+    folio           INTEGER NOT NULL,
+    cliente_id      TEXT REFERENCES clientes(id) ON DELETE SET NULL,
+    cliente_nombre  TEXT NOT NULL DEFAULT '',
+    fecha           TEXT NOT NULL,
+    validez_dias    INTEGER NOT NULL DEFAULT 15,
+    notas           TEXT,
+    estado          TEXT NOT NULL DEFAULT 'Pendiente',
+    venta_id        TEXT REFERENCES ventas(id) ON DELETE SET NULL,
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE cotizaciones_detalle (
+    id               TEXT PRIMARY KEY,
+    cotizacion_id    TEXT NOT NULL REFERENCES cotizaciones(id) ON DELETE CASCADE,
+    producto_id      TEXT REFERENCES productos_finales(id) ON DELETE SET NULL,
+    producto_nombre  TEXT NOT NULL,
+    cantidad         REAL NOT NULL,
+    precio_unitario  REAL NOT NULL
+);
+CREATE TABLE gastos (
+    id           TEXT PRIMARY KEY,
+    fecha        TEXT NOT NULL,
+    categoria    TEXT NOT NULL,
+    descripcion  TEXT,
+    monto        REAL NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE configuracion (
+    clave  TEXT PRIMARY KEY,
+    valor  TEXT
+);
+"""
 
 def migrar_a_2():
     """Versión 1 (primera versión local) -> 2.
     Abonos, kárdex, cotizaciones guardadas, gastos, configuración, fecha de entrega,
     estados Listo/Entregado separados y costo/nombre guardados en cada venta."""
-    tablas_nuevas = '\n'.join(_definicion(t) for t in
-                               ('pagos', 'movimientos_inventario', 'cotizaciones', 'cotizaciones_detalle', 'gastos', 'configuracion'))
     return """
         -- ventas: se reconstruye para quitar el CHECK de estados y agregar columnas
         CREATE TABLE ventas_nueva (
@@ -229,7 +293,7 @@ def migrar_a_2():
             (SELECT nombre FROM insumos i WHERE i.id = compras_detalle.insumo_id), 'Insumo');
 
         ALTER TABLE clientes ADD COLUMN notas TEXT;
-    """ + tablas_nuevas + """
+    """ + TABLAS_NUEVAS_V2 + """
         CREATE INDEX idx_mov_insumo ON movimientos_inventario(insumo_id);
         CREATE INDEX idx_mov_ref ON movimientos_inventario(ref_tipo, ref_id);
         INSERT OR IGNORE INTO contadores (nombre, valor) VALUES ('cotizaciones', 0);
@@ -249,8 +313,24 @@ def migrar_a_2():
     """
 
 
+def migrar_a_3():
+    """Versión 2 -> 3: bolívares con tasa del día (tasa guardada en ventas,
+    cotizaciones y abonos; abonos en Bs; historial de tasas)."""
+    return """
+        ALTER TABLE ventas ADD COLUMN tasa REAL;
+        ALTER TABLE cotizaciones ADD COLUMN tasa REAL;
+        ALTER TABLE pagos ADD COLUMN moneda TEXT NOT NULL DEFAULT 'USD';
+        ALTER TABLE pagos ADD COLUMN monto_original REAL;
+        ALTER TABLE pagos ADD COLUMN tasa REAL;
+        CREATE TABLE tasas (
+            fecha  TEXT PRIMARY KEY,
+            tasa   REAL NOT NULL
+        );
+    """
+
+
 # Cada migración devuelve el SQL que lleva la base de la versión N-1 a la N.
-MIGRACIONES = {2: migrar_a_2}
+MIGRACIONES = {2: migrar_a_2, 3: migrar_a_3}
 
 
 def _ejecutar(con, sql, version):

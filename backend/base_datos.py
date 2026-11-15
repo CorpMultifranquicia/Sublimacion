@@ -50,7 +50,15 @@ CONFIG_DEFECTO = {
     'cotizacion_condiciones': 'Precios sujetos a cambio sin previo aviso. Se requiere 50% de anticipo para iniciar el pedido.',
     'recibo_pie': '¡Gracias por tu compra!',
     'ultimo_respaldo': '',           # fecha ISO de la última descarga de respaldo
+    # Bolívares: los precios se manejan en la moneda base ($) y se convierten con la tasa del día.
+    'bs_activo': '1',                # '1' muestra equivalentes en Bs y permite documentos en Bs
+    'moneda_local': 'Bs',
+    'tasa_dia': '',                  # Bs por $ (se carga a mano)
+    'tasa_fecha': '',                # fecha ISO de la tasa cargada
+    'documentos_moneda': 'ambas',    # moneda por defecto de los PDF: base / local / ambas
 }
+
+MONEDAS_PAGO = ('USD', 'VES')
 
 
 class ErrorDeDatos(ValueError):
@@ -156,6 +164,32 @@ class BaseDatos:
                             'ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor',
                             (clave, '' if valor is None else str(valor)))
 
+    # ---------- Tasa de cambio ----------
+
+    def tasa_vigente(self, con):
+        valor = self.config(con).get('tasa_dia')
+        try:
+            tasa = float(valor)
+            return tasa if tasa > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    def guardar_tasa(self, datos):
+        """Registra la tasa (Bs por $) de una fecha. Si es la más reciente, pasa a ser la tasa del día."""
+        tasa = numero(datos.get('tasa'), 'Tasa', 0.000001)
+        fecha = datos.get('fecha') or hoy()
+        with self.conexion() as con:
+            con.execute('INSERT INTO tasas (fecha, tasa) VALUES (?, ?) ON CONFLICT(fecha) DO UPDATE SET tasa = excluded.tasa',
+                        (fecha, tasa))
+            ultima = con.execute('SELECT fecha, tasa FROM tasas ORDER BY fecha DESC LIMIT 1').fetchone()
+        self.guardar_config({'tasa_dia': f"{ultima['tasa']:g}", 'tasa_fecha': ultima['fecha']})
+
+    def borrar_tasa(self, fecha):
+        with self.conexion() as con:
+            con.execute('DELETE FROM tasas WHERE fecha = ?', (fecha,))
+            ultima = con.execute('SELECT fecha, tasa FROM tasas ORDER BY fecha DESC LIMIT 1').fetchone()
+        self.guardar_config({'tasa_dia': f"{ultima['tasa']:g}" if ultima else '', 'tasa_fecha': ultima['fecha'] if ultima else ''})
+
     # ---------- Lectura completa (lo que el frontend carga en memoria) ----------
 
     def estado(self):
@@ -174,6 +208,7 @@ class BaseDatos:
             cotizaciones = q('SELECT * FROM cotizaciones ORDER BY fecha DESC, folio DESC')
             cotizaciones_detalle = q('SELECT * FROM cotizaciones_detalle ORDER BY rowid')
             gastos = q('SELECT * FROM gastos ORDER BY fecha DESC, created_at DESC')
+            tasas = q('SELECT * FROM tasas ORDER BY fecha DESC LIMIT 60')
             config = self.config(con)
 
         def agrupar(filas, clave):
@@ -191,6 +226,7 @@ class BaseDatos:
 
         return {
             'config': config,
+            'tasas': tasas,
             'insumos': insumos,
             'clientes': clientes,
             'gastos': gastos,
@@ -207,6 +243,7 @@ class BaseDatos:
                 'fecha_entrega': v['fecha_entrega'],
                 'entregado_en': v['entregado_en'],
                 'notas': v['notas'] or '',
+                'tasa': v['tasa'],
                 'estado': v['estado_produccion'],
                 'detalle': [{'producto_id': d['producto_id'], 'producto_nombre': d['producto_nombre'],
                              'cantidad': d['cantidad'], 'precio_unitario': d['precio_unitario'],
@@ -214,7 +251,8 @@ class BaseDatos:
                             for d in vdet_por.get(v['id'], [])],
                 'adjuntos': [{'id': a['id'], 'tipo': a['tipo'], 'url': a['url'], 'nombre': a['nombre']}
                              for a in adj_por.get(v['id'], [])],
-                'pagos': [{'id': p['id'], 'fecha': p['fecha'], 'monto': p['monto'], 'metodo': p['metodo'], 'nota': p['nota']}
+                'pagos': [{'id': p['id'], 'fecha': p['fecha'], 'monto': p['monto'], 'metodo': p['metodo'], 'nota': p['nota'],
+                           'moneda': p['moneda'], 'monto_original': p['monto_original'], 'tasa': p['tasa']}
                           for p in pagos_por.get(v['id'], [])],
             } for v in ventas],
             'compras': [{
@@ -472,11 +510,14 @@ class BaseDatos:
         cliente_id = datos.get('cliente_id') or None
         if cliente_id and not con.execute('SELECT 1 FROM clientes WHERE id = ?', (cliente_id,)).fetchone():
             raise ErrorDeDatos('El cliente no existe.')
+        tasa = datos.get('tasa')
         return {
             'cliente_id': cliente_id,
             'fecha': datos.get('fecha') or hoy(),
             'fecha_entrega': datos.get('fecha_entrega') or None,
             'notas': (datos.get('notas') or '').strip(),
+            # Si no se indica, se guarda la tasa del día vigente.
+            'tasa': numero(tasa, 'Tasa', 0.000001) if tasa not in (None, '') else self.tasa_vigente(con),
         }
 
     def registrar_venta(self, datos):
@@ -489,15 +530,16 @@ class BaseDatos:
             venta_id = nuevo_id()
             folio = self._siguiente_folio(con, 'ventas')
             con.execute(
-                'INSERT INTO ventas (id, folio, cliente_id, fecha, fecha_entrega, notas, estado_produccion, entregado_en) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO ventas (id, folio, cliente_id, fecha, fecha_entrega, notas, estado_produccion, entregado_en, tasa) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (venta_id, folio, cab['cliente_id'], cab['fecha'], cab['fecha_entrega'], cab['notas'], estado,
-                 hoy() if estado == 'Entregado' else None),
+                 hoy() if estado == 'Entregado' else None, cab['tasa']),
             )
             self._guardar_detalle_venta(con, venta_id, folio, cab['fecha'], lineas)
 
             abono = datos.get('abono') or {}
-            if numero(abono.get('monto') or 0, 'Abono', 0) > 0:
+            # El abono puede venir en $ (monto) o en Bs (monto_original).
+            if numero(abono.get('monto') or abono.get('monto_original') or 0, 'Abono', 0) > 0:
                 self._registrar_pago(con, venta_id, {'fecha': cab['fecha'], **abono})
 
             if datos.get('cotizacion_id'):
@@ -518,8 +560,9 @@ class BaseDatos:
             pagado = con.execute('SELECT COALESCE(SUM(monto), 0) AS p FROM pagos WHERE venta_id = ?', (id_,)).fetchone()['p']
             if pagado > total + 0.005:
                 raise ErrorDeDatos('El nuevo total es menor que lo ya abonado. Elimina primero algún abono.')
-            con.execute('UPDATE ventas SET cliente_id = ?, fecha = ?, fecha_entrega = ?, notas = ? WHERE id = ?',
-                        (cab['cliente_id'], cab['fecha'], cab['fecha_entrega'], cab['notas'], id_))
+            con.execute('UPDATE ventas SET cliente_id = ?, fecha = ?, fecha_entrega = ?, notas = ?, tasa = ? WHERE id = ?',
+                        (cab['cliente_id'], cab['fecha'], cab['fecha_entrega'], cab['notas'],
+                         cab['tasa'] if datos.get('tasa') not in (None, '') else venta['tasa'], id_))
             referencia = folio_txt('VEN', venta['folio'])
             self._revertir_movimientos(con, 'venta', id_, 'Edición de venta', referencia)
             self._guardar_detalle_venta(con, id_, venta['folio'], cab['fecha'], lineas)
@@ -546,7 +589,20 @@ class BaseDatos:
     # ---------- Pagos / abonos ----------
 
     def _registrar_pago(self, con, venta_id, datos):
-        monto = numero(datos.get('monto'), 'Monto', 0)
+        moneda = datos.get('moneda') or 'USD'
+        if moneda not in MONEDAS_PAGO:
+            raise ErrorDeDatos('Moneda de pago inválida.')
+        monto_original = None
+        tasa = None
+        if moneda == 'VES':
+            # El cliente pagó en bolívares: se convierte a $ con la tasa indicada (o la del día).
+            monto_original = numero(datos.get('monto_original'), 'Monto en Bs', 0)
+            tasa = numero(datos.get('tasa') or self.tasa_vigente(con) or 0, 'Tasa', 0)
+            if tasa <= 0:
+                raise ErrorDeDatos('Para registrar un pago en bolívares carga primero la tasa del día.')
+            monto = round(monto_original / tasa, 2)
+        else:
+            monto = numero(datos.get('monto'), 'Monto', 0)
         if monto <= 0:
             raise ErrorDeDatos('El monto debe ser mayor que cero.')
         metodo = datos.get('metodo') or 'Efectivo'
@@ -555,11 +611,16 @@ class BaseDatos:
         total = con.execute('SELECT COALESCE(SUM(cantidad * precio_unitario), 0) AS t FROM ventas_detalle WHERE venta_id = ?',
                             (venta_id,)).fetchone()['t']
         pagado = con.execute('SELECT COALESCE(SUM(monto), 0) AS p FROM pagos WHERE venta_id = ?', (venta_id,)).fetchone()['p']
-        if pagado + monto > total + 0.005:
-            raise ErrorDeDatos(f'El abono supera el saldo pendiente ({total - pagado:.2f}).')
+        saldo = round(total - pagado, 2)
+        if moneda == 'VES' and monto > saldo and monto - saldo <= 0.01:
+            monto = saldo  # diferencia de redondeo al convertir de Bs
+        if monto > saldo + 0.005:
+            raise ErrorDeDatos(f'El abono supera el saldo pendiente ({saldo:.2f}).')
         pago_id = nuevo_id()
-        con.execute('INSERT INTO pagos (id, venta_id, fecha, monto, metodo, nota) VALUES (?, ?, ?, ?, ?, ?)',
-                    (pago_id, venta_id, datos.get('fecha') or hoy(), round(monto, 2), metodo, (datos.get('nota') or '').strip()))
+        con.execute('INSERT INTO pagos (id, venta_id, fecha, monto, metodo, nota, moneda, monto_original, tasa) '
+                    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    (pago_id, venta_id, datos.get('fecha') or hoy(), round(monto, 2), metodo, (datos.get('nota') or '').strip(),
+                     moneda, monto_original, tasa))
         return pago_id
 
     def registrar_pago(self, venta_id, datos):
@@ -707,7 +768,9 @@ class BaseDatos:
             if not cliente:
                 raise ErrorDeDatos('El cliente no existe.')
             cliente_nombre = cliente['nombre']
+        tasa = datos.get('tasa')
         return {
+            'tasa': numero(tasa, 'Tasa', 0.000001) if tasa not in (None, '') else self.tasa_vigente(con),
             'cliente_id': cliente_id, 'cliente_nombre': cliente_nombre,
             'fecha': datos.get('fecha') or hoy(),
             'validez_dias': int(numero(datos.get('validez_dias') or 15, 'Validez', 1)),
@@ -726,17 +789,17 @@ class BaseDatos:
             c = self._validar_cotizacion(con, datos)
             cot_id = nuevo_id()
             folio = self._siguiente_folio(con, 'cotizaciones')
-            con.execute('INSERT INTO cotizaciones (id, folio, cliente_id, cliente_nombre, fecha, validez_dias, notas) '
-                        'VALUES (?, ?, ?, ?, ?, ?, ?)',
-                        (cot_id, folio, c['cliente_id'], c['cliente_nombre'], c['fecha'], c['validez_dias'], c['notas']))
+            con.execute('INSERT INTO cotizaciones (id, folio, cliente_id, cliente_nombre, fecha, validez_dias, notas, tasa) '
+                        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                        (cot_id, folio, c['cliente_id'], c['cliente_nombre'], c['fecha'], c['validez_dias'], c['notas'], c['tasa']))
             self._guardar_lineas_cotizacion(con, cot_id, c['lineas'])
             return cot_id
 
     def actualizar_cotizacion(self, id_, datos):
         with self.conexion() as con:
             c = self._validar_cotizacion(con, datos)
-            con.execute('UPDATE cotizaciones SET cliente_id = ?, cliente_nombre = ?, fecha = ?, validez_dias = ?, notas = ? WHERE id = ?',
-                        (c['cliente_id'], c['cliente_nombre'], c['fecha'], c['validez_dias'], c['notas'], id_))
+            con.execute('UPDATE cotizaciones SET cliente_id = ?, cliente_nombre = ?, fecha = ?, validez_dias = ?, notas = ?, tasa = ? WHERE id = ?',
+                        (c['cliente_id'], c['cliente_nombre'], c['fecha'], c['validez_dias'], c['notas'], c['tasa'], id_))
             self._guardar_lineas_cotizacion(con, id_, c['lineas'])
 
     def borrar_cotizacion(self, id_):

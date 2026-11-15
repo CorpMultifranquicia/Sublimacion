@@ -27,10 +27,12 @@ const nfCosto = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maxim
 const nfCant = new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 });
 
 let simboloMoneda = '$';
+let simboloLocal = 'Bs';
 
 /** Lo llama store.js al cargar la configuración del negocio. */
-export function configurarMoneda(simbolo) {
+export function configurarMoneda(simbolo, local) {
     simboloMoneda = simbolo || '$';
+    if (local) simboloLocal = local;
 }
 
 function conMoneda(texto) {
@@ -42,6 +44,17 @@ function conMoneda(texto) {
 export function fmt(n) {
     const v = Number(n) || 0;
     return (v < 0 ? '-' : '') + conMoneda(nf2.format(Math.abs(v)));
+}
+
+/** Bolívares (moneda local): Bs 3.650,00 */
+export function fmtBs(n) {
+    const v = Number(n) || 0;
+    return `${v < 0 ? '-' : ''}${simboloLocal} ${nf2.format(Math.abs(v))}`;
+}
+
+/** Tasa de cambio: 36,50 (hasta 4 decimales) */
+export function fmtTasa(n) {
+    return nfCosto.format(Number(n) || 0);
 }
 
 /** Costos unitarios con hasta 4 decimales: $0,004 (para tinta por ml, papel por hoja...). */
