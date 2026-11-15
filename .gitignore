@@ -8,3 +8,6 @@ __pycache__/
 .venv/
 build/
 dist/
+
+# Temporales del generador del instructivo
+docs/instructivo/.temp/

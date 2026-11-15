@@ -47,7 +47,7 @@ function montar(el) {
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                    <tr><th class="px-4 py-3">Cotización</th><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Detalle</th>
+                    <tr><th class="px-4 py-3">Cotización</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Detalle</th>
                         <th class="px-4 py-3 text-right">Total</th><th class="px-4 py-3 whitespace-nowrap">Válida hasta</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3"></th></tr>
                 </thead>
                 <tbody id="tbl-cotizaciones" class="text-sm divide-y divide-slate-50"></tbody>
@@ -65,8 +65,7 @@ function render() {
     document.getElementById('tbl-cotizaciones').innerHTML = pag.items.map(c => {
         const tel = Store.state.clientes.find(x => x.id === c.cliente_id)?.telefono;
         return `<tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-mono font-semibold text-violet-600 whitespace-nowrap">${folioCotizacion(c)}</td>
-            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${fmtFecha(c.fecha)}</td>
+            <td class="px-4 py-3 whitespace-nowrap"><span class="font-mono font-semibold text-violet-600">${folioCotizacion(c)}</span><span class="block text-xs text-slate-400">${fmtFecha(c.fecha)}</span></td>
             <td class="px-4 py-3 font-medium text-slate-700 min-w-[8rem]">${esc(c.cliente_nombre || '—')}</td>
             <td class="px-4 py-3 text-slate-600 max-w-[14rem]"><div class="truncate" title="${esc(detalle(c))}">${esc(detalle(c))}</div></td>
             <td class="px-4 py-3 text-right font-bold text-slate-700 whitespace-nowrap">${fmt(Store.montoCotizacion(c))}</td>
@@ -81,7 +80,7 @@ function render() {
                 ${botonIcono(`App.eliminarCotizacion('${c.id}')`, 'fa-solid fa-trash', 'Eliminar', 'hover:text-rose-500')}
             </td>
         </tr>`;
-    }).join('') || filaVacia(8, consulta ? 'Ninguna cotización coincide' : 'Sin cotizaciones. Usa "Nueva Cotización" para crear una.');
+    }).join('') || filaVacia(7, consulta ? 'Ninguna cotización coincide' : 'Sin cotizaciones. Usa "Nueva Cotización" para crear una.');
     document.getElementById('paginacion-cotizaciones').innerHTML = barraPaginacion('cotizaciones', pag);
 }
 

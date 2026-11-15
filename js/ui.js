@@ -179,7 +179,9 @@ export function combo(input, cfg) {
         } catch (e) { handleError(e); }
     }
 
-    input.addEventListener('focus', () => { input.select(); pintar(); });
+    // Al enfocar se muestra la lista solo si aún no hay nada elegido (al editar no estorba).
+    input.addEventListener('focus', () => { input.select(); if (!seleccionado) pintar(); });
+    input.addEventListener('click', () => { if (lista.classList.contains('hidden')) pintar(); });
     input.addEventListener('input', () => {
         seleccionado = null;
         indice = activos.length ? 0 : -1;

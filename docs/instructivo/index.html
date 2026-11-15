@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instructivo de SubliApp · Zafiro Lab</title>
+<link rel="stylesheet" href="../../vendor/inter/inter.css">
+<style>
+    :root {
+        --marino: #1b2a80; --azul: #2347c8; --azul-claro: #eef3ff; --violeta: #8b2fc9; --violeta-claro: #f5edfb;
+        --texto: #1e293b; --gris: #64748b; --linea: #e2e8f0; --fondo: #f8fafc;
+        --verde: #059669; --verde-claro: #ecfdf5; --ambar: #b45309; --ambar-claro: #fffbeb; --rojo: #e11d48; --rojo-claro: #fff1f2;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, Helvetica, Arial, sans-serif; color: var(--texto); background: #fff; line-height: 1.6; font-size: 15px; }
+    main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+    h1, h2, h3 { color: var(--marino); line-height: 1.25; }
+    h2 { font-size: 26px; margin: 56px 0 8px; padding-top: 8px; border-top: 4px solid; border-image: linear-gradient(90deg, var(--azul), var(--violeta)) 1; }
+    h2 .num { display: inline-flex; width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--azul), var(--violeta)); color: #fff; align-items: center; justify-content: center; font-size: 18px; margin-right: 10px; vertical-align: middle; }
+    h3 { font-size: 18px; margin: 28px 0 6px; }
+    p { margin: 8px 0; }
+    .intro { color: var(--gris); font-size: 16px; margin-top: 0; }
+    a { color: var(--azul); }
+    figure { margin: 18px 0; break-inside: avoid; }
+    figure img { width: 100%; border-radius: 12px; border: 1px solid var(--linea); box-shadow: 0 6px 20px rgba(15, 23, 42, .08); display: block; }
+    figure.doc img { max-width: 520px; margin: 0 auto; }
+    figcaption { font-size: 13px; color: var(--gris); margin-top: 6px; text-align: center; }
+    ol.pasos { counter-reset: paso; list-style: none; padding: 0; margin: 12px 0; }
+    ol.pasos > li { counter-increment: paso; position: relative; padding: 10px 12px 10px 52px; margin-bottom: 8px; background: var(--fondo); border-radius: 10px; break-inside: avoid; }
+    ol.pasos > li::before { content: counter(paso); position: absolute; left: 12px; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--azul); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .marcas { list-style: none; padding: 0; margin: 10px 0; }
+    .marcas li { padding: 6px 0 6px 40px; position: relative; break-inside: avoid; }
+    .m { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--rojo); color: #fff; font-weight: 700; font-size: 13px; align-items: center; justify-content: center; position: absolute; left: 4px; top: 7px; }
+    .m-in { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--rojo); color: #fff; font-weight: 700; font-size: 11px; align-items: center; justify-content: center; vertical-align: 1px; }
+    .caja { border-radius: 12px; padding: 12px 16px 12px 52px; margin: 16px 0; position: relative; break-inside: avoid; }
+    .caja::before { position: absolute; left: 16px; top: 11px; font-size: 20px; }
+    .consejo { background: var(--azul-claro); } .consejo::before { content: "💡"; }
+    .importante { background: var(--ambar-claro); border-left: 4px solid #f59e0b; } .importante::before { content: "⚠️"; }
+    .bien { background: var(--verde-claro); } .bien::before { content: "✅"; }
+    .caja b:first-child { color: var(--marino); }
+    .boton { display: inline-block; padding: 1px 9px; border-radius: 6px; background: var(--azul); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .boton.sec { background: #fff; color: var(--texto); border: 1px solid var(--linea); }
+    .menu { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--azul-claro); color: var(--azul); font-size: 13px; font-weight: 600; white-space: nowrap; }
+    kbd { font-family: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid #cbd5e1; border-bottom-width: 2px; border-radius: 5px; background: #fff; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; break-inside: avoid; }
+    th { text-align: left; background: var(--marino); color: #fff; padding: 8px 10px; font-weight: 600; }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+    tr:nth-child(even) td { background: var(--fondo); }
+    .etq { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .e-azul { background: #dbeafe; color: #1d4ed8; } .e-ambar { background: #fef3c7; color: #b45309; } .e-violeta { background: #ede9fe; color: #6d28d9; }
+    .e-verde { background: #d1fae5; color: #047857; } .e-rojo { background: #ffe4e6; color: #be123c; } .e-gris { background: #f1f5f9; color: #475569; }
+    .portada { min-height: 92vh; display: flex; flex-direction: column; justify-content: center; text-align: center; break-after: page; }
+    .portada .gema { width: 96px; margin: 0 auto 18px; }
+    .portada h1 { font-size: 46px; margin: 0; background: linear-gradient(90deg, var(--marino), var(--azul), var(--violeta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .portada .sub { font-size: 20px; color: var(--gris); margin: 6px 0 36px; }
+    .portada .negocio { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--violeta); font-weight: 700; }
+    .indice { columns: 2; column-gap: 32px; padding: 0; list-style: none; margin: 0; }
+    .indice li { padding: 5px 0; border-bottom: 1px dashed var(--linea); break-inside: avoid; }
+    .indice a { text-decoration: none; color: var(--texto); font-weight: 500; }
+    .indice span { color: var(--azul); font-weight: 700; display: inline-block; width: 28px; }
+    .diagrama { margin: 18px 0; break-inside: avoid; text-align: center; }
+    .diagrama svg { max-width: 100%; height: auto; }
+    .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .glosario dt { font-weight: 700; color: var(--marino); margin-top: 10px; }
+    .glosario dd { margin: 2px 0 0 0; color: var(--texto); }
+    .faq h3 { font-size: 16px; margin-top: 20px; }
+    @media (max-width: 700px) { .indice { columns: 1; } .dos { grid-template-columns: 1fr; } h2 { font-size: 22px; } }
+    @media print {
+        body { font-size: 11.5pt; }
+        main { padding: 0; max-width: none; }
+        h2 { break-before: page; margin-top: 0; }
+        h2.sigue { break-before: auto; margin-top: 32px; }
+        figure img { box-shadow: none; max-height: 112mm; width: auto; max-width: 100%; margin: 0 auto; }
+        figure.doc img { max-height: 125mm; }
+        .portada { min-height: 250mm; }
+        a { color: inherit; text-decoration: none; }
+    }
+</style>
+</head>
+<body>
+<main>
+
+<!-- ============ PORTADA ============ -->
+<section class="portada">
+    <svg class="gema" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 54 24 32 60 10 24Z" fill="#2347c8"/><path d="M32 4 54 24H10Z" fill="#8b2fc9"/><path d="M32 4 41 24 32 60 23 24Z" fill="#fff" opacity=".18"/></svg>
+    <p class="negocio">Zafiro Lab · Sublimación y personalización</p>
+    <h1>Instructivo de SubliApp</h1>
+    <p class="sub">Guía paso a paso para manejar ventas, producción, inventario,<br>costos y cobros del negocio</p>
+    <p style="color:var(--gris);font-size:14px">Versión local para Windows · No necesita internet</p>
+</section>
+
+<!-- ============ ÍNDICE ============ -->
+<h2 class="sigue" style="border:none;margin-top:0">Contenido</h2>
+<ol class="indice">
+    <li><a href="#que-es"><span>1</span>¿Qué es SubliApp?</a></li>
+    <li><a href="#abrir"><span>2</span>Abrir y cerrar el programa</a></li>
+    <li><a href="#pantalla"><span>3</span>Conociendo la pantalla</a></li>
+    <li><a href="#primeros-pasos"><span>4</span>Primeros pasos (orden recomendado)</a></li>
+    <li><a href="#configuracion"><span>5</span>Configuración del negocio</a></li>
+    <li><a href="#tasa"><span>6</span>Tasa del día y bolívares</a></li>
+    <li><a href="#inventario"><span>7</span>Inventario de insumos</a></li>
+    <li><a href="#productos"><span>8</span>Productos, recetas y precios</a></li>
+    <li><a href="#clientes"><span>9</span>Clientes</a></li>
+    <li><a href="#ventas"><span>10</span>Ventas</a></li>
+    <li><a href="#abonos"><span>11</span>Abonos y cobros</a></li>
+    <li><a href="#recibos"><span>12</span>Recibos en PDF y WhatsApp</a></li>
+    <li><a href="#cotizaciones"><span>13</span>Cotizaciones (presupuestos)</a></li>
+    <li><a href="#produccion"><span>14</span>Producción</a></li>
+    <li><a href="#compras"><span>15</span>Compras a proveedores</a></li>
+    <li><a href="#gastos"><span>16</span>Gastos del negocio</a></li>
+    <li><a href="#reportes"><span>17</span>Reportes y Excel</a></li>
+    <li><a href="#inicio"><span>18</span>La pantalla de Inicio</a></li>
+    <li><a href="#respaldos"><span>19</span>Respaldos y seguridad</a></li>
+    <li><a href="#rutinas"><span>20</span>Rutina diaria y semanal</a></li>
+    <li><a href="#faq"><span>21</span>Preguntas frecuentes</a></li>
+    <li><a href="#glosario"><span>22</span>Glosario</a></li>
+</ol>
+
+<!-- ============ 1 ============ -->
+<h2 id="que-es"><span class="num">1</span>¿Qué es SubliApp?</h2>
+<p class="intro">SubliApp es el sistema de gestión de Zafiro Lab. Reúne en un solo lugar todo lo que antes se llevaba en cuadernos, chats y hojas de cálculo.</p>
+<p>Con SubliApp puedes:</p>
+<table>
+    <tr><th style="width:34%">Qué necesitas hacer</th><th>Dónde se hace</th></tr>
+    <tr><td>Registrar un pedido y cobrar anticipos</td><td><span class="menu">Ventas</span></td></tr>
+    <tr><td>Enviar un presupuesto a un cliente</td><td><span class="menu">Cotizaciones</span></td></tr>
+    <tr><td>Saber qué pedidos hay que diseñar, imprimir o entregar</td><td><span class="menu">Producción</span></td></tr>
+    <tr><td>Controlar tazas, franelas, tinta, papel…</td><td><span class="menu">Inventario</span></td></tr>
+    <tr><td>Saber cuánto cuesta fabricar cada producto y cuánto se gana</td><td><span class="menu">Prod. y Precios</span></td></tr>
+    <tr><td>Registrar lo que se compra a proveedores</td><td><span class="menu">Compras</span></td></tr>
+    <tr><td>Anotar alquiler, luz, internet, sueldos…</td><td><span class="menu">Gastos</span></td></tr>
+    <tr><td>Ver si el negocio está ganando dinero</td><td><span class="menu">Reportes</span></td></tr>
+    <tr><td>Recordar cumpleaños de clientes y quién debe dinero</td><td><span class="menu">Inicio</span> y <span class="menu">Clientes</span></td></tr>
+</table>
+<p>El programa trabaja con la información que tú cargas: <b>mientras más completo y ordenado lo mantengas, más útil será</b>. Cada venta descuenta sola los materiales del inventario, calcula la ganancia y queda lista para el reporte del mes.</p>
+
+<div class="diagrama">
+<svg viewBox="0 0 860 210" role="img" aria-label="Ciclo de un pedido">
+    <defs>
+        <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#2347c8"/><stop offset="1" stop-color="#8b2fc9"/></linearGradient>
+        <marker id="fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#94a3b8"/></marker>
+    </defs>
+    <text x="430" y="22" text-anchor="middle" font-family="Inter,Helvetica" font-size="16" font-weight="700" fill="#1b2a80">El camino de un pedido en SubliApp</text>
+    <g font-family="Inter,Helvetica" text-anchor="middle">
+        <rect x="10" y="50" width="150" height="80" rx="14" fill="#f5edfb" stroke="#8b2fc9"/><text x="85" y="84" font-size="15" font-weight="700" fill="#6d28d9">1. Cotización</text><text x="85" y="106" font-size="12" fill="#475569">el cliente pregunta</text>
+        <rect x="185" y="50" width="150" height="80" rx="14" fill="#eef3ff" stroke="#2347c8"/><text x="260" y="84" font-size="15" font-weight="700" fill="#1b2a80">2. Venta</text><text x="260" y="106" font-size="12" fill="#475569">confirma y abona</text>
+        <rect x="360" y="50" width="150" height="80" rx="14" fill="#fffbeb" stroke="#f59e0b"/><text x="435" y="84" font-size="15" font-weight="700" fill="#b45309">3. Producción</text><text x="435" y="106" font-size="12" fill="#475569">diseñar e imprimir</text>
+        <rect x="535" y="50" width="150" height="80" rx="14" fill="#ede9fe" stroke="#7c3aed"/><text x="610" y="84" font-size="15" font-weight="700" fill="#6d28d9">4. Listo</text><text x="610" y="106" font-size="12" fill="#475569">avisar por WhatsApp</text>
+        <rect x="710" y="50" width="140" height="80" rx="14" fill="#ecfdf5" stroke="#059669"/><text x="780" y="84" font-size="15" font-weight="700" fill="#047857">5. Entregado</text><text x="780" y="106" font-size="12" fill="#475569">cobrar el saldo</text>
+        <path d="M160 90h22M335 90h22M510 90h22M685 90h22" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#fl)"/>
+        <rect x="185" y="150" width="500" height="44" rx="10" fill="url(#g1)" opacity=".1"/>
+        <text x="435" y="177" font-size="13" fill="#1b2a80">Al registrar la venta, el inventario se descuenta solo y la ganancia queda calculada</text>
+    </g>
+</svg>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2 id="abrir"><span class="num">2</span>Abrir y cerrar el programa</h2>
+<h3>Abrir SubliApp</h3>
+<ol class="pasos">
+    <li>Haz <b>doble clic</b> en el acceso directo <b>SubliApp</b> del escritorio (o en <b>SubliApp.exe</b> dentro de la carpeta del programa).</li>
+    <li>Se abre una <b>ventana negra</b> con el mensaje “SubliApp está funcionando”. Esa ventana <b>es el programa</b>.</li>
+    <li>Un segundo después se abre el navegador (Chrome o Edge) con la pantalla de SubliApp. Desde ahí trabajas.</li>
+</ol>
+<div class="caja importante"><b>No cierres la ventana negra mientras trabajas.</b> Puedes minimizarla (botón <b>—</b> de la esquina), pero si la cierras SubliApp se apaga y el navegador mostrará “No se pudo cargar la información”.</div>
+<div class="caja consejo"><b>¿Cerraste el navegador por error?</b> No pasa nada: vuelve a hacer doble clic en SubliApp, o escribe <b>127.0.0.1:8765</b> en la barra del navegador. Todo lo que guardaste sigue ahí.</div>
+<h3>La primera vez en una PC nueva</h3>
+<p>Windows puede mostrar un aviso azul: <b>“Windows protegió su PC”</b>. Es normal en programas hechos a medida. Haz clic en <b>Más información</b> y luego en <b>Ejecutar de todas formas</b>. Solo ocurre la primera vez.</p>
+<h3>Cerrar SubliApp</h3>
+<p>Al terminar el día cierra el navegador y luego la ventana negra. Todo se guarda automáticamente en el momento en que presionas cada botón <span class="boton">Guardar</span>: no hay un “guardar” general.</p>
+<h3>¿No necesita internet?</h3>
+<p>No. SubliApp funciona completamente en la PC. Internet solo se usa para abrir WhatsApp cuando envías un mensaje a un cliente.</p>
+
+<!-- ============ 3 ============ -->
+<h2 id="pantalla"><span class="num">3</span>Conociendo la pantalla</h2>
+<p class="intro">Todas las secciones tienen la misma organización. Si aprendes esta pantalla, sabrás moverte por todo el programa.</p>
+<figure><img src="img/01_pantalla_general.png" alt="Pantalla general de SubliApp"><figcaption>Pantalla de Inicio con sus partes principales</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Menú lateral.</b> Haz clic en un nombre para ir a esa sección. Los círculos rojos con número avisan cosas pendientes (pedidos atrasados, insumos por agotarse).</li>
+    <li><span class="m">2</span><b>Nombre de la sección</b> en la que estás.</li>
+    <li><span class="m">3</span><b>Tasa del día.</b> Muestra cuántos bolívares vale un dólar hoy. Si aparece en amarillo, hay que actualizarla (ver capítulo 6).</li>
+    <li><span class="m">4</span><b>Botones de acción.</b> Cambian según la sección: <span class="boton">Nueva Venta</span>, <span class="boton">Nuevo Insumo</span>, etc.</li>
+    <li><span class="m">5</span><b>Contenido de la sección:</b> tarjetas, tablas y listas.</li>
+</ul>
+<h3>Cosas que funcionan igual en todo el programa</h3>
+<table>
+    <tr><th style="width:30%">Elemento</th><th>Para qué sirve</th></tr>
+    <tr><td><b>Buscador</b> 🔍</td><td>Escribe parte de un nombre, folio o producto y la lista se filtra al instante. No importan las mayúsculas ni los acentos.</td></tr>
+    <tr><td><b>Botones de filtro</b> (por ejemplo “Con saldo”)</td><td>Muestran solo una parte de la lista. El que está en azul es el activo.</td></tr>
+    <tr><td><b>Íconos de cada fila</b></td><td>✏️ editar · 🗑️ eliminar o anular · 📄 descargar PDF · <span style="color:#059669">WhatsApp</span> enviar mensaje. Si pasas el mouse encima aparece su nombre.</td></tr>
+    <tr><td><b>Formularios</b> (ventanas sobre la pantalla)</td><td>Se completan y se confirman con el botón azul de abajo. Para cerrar sin guardar: <span class="boton sec">Cancelar</span>, la <b>X</b> o la tecla <kbd>Esc</kbd>.</td></tr>
+    <tr><td><b>Campos con buscador</b> (cliente, producto, insumo)</td><td>Escribe unas letras y elige de la lista con el mouse o con las flechas <kbd>↑</kbd><kbd>↓</kbd> y <kbd>Enter</kbd>.</td></tr>
+    <tr><td><b>Mensajes en la esquina inferior derecha</b></td><td>Confirman lo que hiciste (verde), avisan algo (amarillo) o explican un error (rojo). Desaparecen solos.</td></tr>
+    <tr><td><b>Páginas</b></td><td>Las listas largas se dividen de 10 en 10. Usa <span class="boton sec">Anterior</span> y <span class="boton sec">Siguiente</span> al pie de la tabla.</td></tr>
+</table>
+<div class="caja consejo"><b>Montos y fechas.</b> Los montos se muestran como <b>$12.500,00</b> (punto para miles, coma para decimales) y las fechas como <b>15/11/2026</b>. Al <i>escribir</i> un número con decimales en un campo, usa el formato que te pida tu teclado (normalmente punto: <b>8.5</b>).</div>
+
+<!-- ============ 4 ============ -->
+<h2 id="primeros-pasos"><span class="num">4</span>Primeros pasos (orden recomendado)</h2>
+<p class="intro">Antes de registrar la primera venta hay que “enseñarle” al programa con qué materiales se trabaja y qué productos se venden. Sigue este orden una sola vez:</p>
+<div class="diagrama">
+<svg viewBox="0 0 860 150" role="img" aria-label="Orden de carga inicial">
+    <defs><marker id="fl2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#94a3b8"/></marker></defs>
+    <g font-family="Inter,Helvetica" text-anchor="middle">
+        <circle cx="70" cy="60" r="42" fill="#eef3ff" stroke="#2347c8" stroke-width="2"/><text x="70" y="56" font-size="22">⚙️</text><text x="70" y="78" font-size="11" font-weight="700" fill="#1b2a80">1</text>
+        <text x="70" y="128" font-size="13" font-weight="600" fill="#1e293b">Configuración</text>
+        <circle cx="240" cy="60" r="42" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/><text x="240" y="56" font-size="22">💱</text><text x="240" y="78" font-size="11" font-weight="700" fill="#b45309">2</text>
+        <text x="240" y="128" font-size="13" font-weight="600" fill="#1e293b">Tasa del día</text>
+        <circle cx="410" cy="60" r="42" fill="#ecfdf5" stroke="#059669" stroke-width="2"/><text x="410" y="56" font-size="22">📦</text><text x="410" y="78" font-size="11" font-weight="700" fill="#047857">3</text>
+        <text x="410" y="128" font-size="13" font-weight="600" fill="#1e293b">Inventario</text>
+        <circle cx="580" cy="60" r="42" fill="#f5edfb" stroke="#8b2fc9" stroke-width="2"/><text x="580" y="56" font-size="22">🏷️</text><text x="580" y="78" font-size="11" font-weight="700" fill="#6d28d9">4</text>
+        <text x="580" y="128" font-size="13" font-weight="600" fill="#1e293b">Productos</text>
+        <circle cx="770" cy="60" r="48" fill="url(#g1)"/><text x="770" y="56" font-size="22">🛒</text><text x="770" y="80" font-size="12" font-weight="700" fill="#fff">¡A vender!</text>
+        <text x="770" y="132" font-size="13" font-weight="600" fill="#1e293b">Ventas</text>
+        <path d="M114 60h80M284 60h80M454 60h80M624 60h92" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#fl2)"/>
+    </g>
+</svg>
+</div>
+<ol class="pasos">
+    <li><b>Configuración:</b> revisa el nombre del negocio, RIF, teléfono y sube el logo. Esto aparece en los recibos y presupuestos. <i>(Capítulo 5)</i></li>
+    <li><b>Tasa del día:</b> carga cuántos bolívares vale el dólar hoy. <i>(Capítulo 6)</i></li>
+    <li><b>Inventario:</b> registra cada material: tazas en blanco, franelas, gorras, papel, tinta, cinta… con lo que cuesta y cuánto tienes. <i>(Capítulo 7)</i></li>
+    <li><b>Productos:</b> crea lo que vendes (por ejemplo “Taza personalizada”) e indica qué materiales lleva cada uno. El programa calcula el costo y la ganancia. <i>(Capítulo 8)</i></li>
+    <li><b>Clientes</b> (opcional): puedes cargarlos ahora o ir creándolos al momento de vender. <i>(Capítulo 9)</i></li>
+</ol>
+<div class="caja bien"><b>¡Listo!</b> A partir de aquí el trabajo diario es: registrar ventas, mover los pedidos en Producción, registrar abonos y, cuando llegue mercancía, registrar la compra.</div>
+
+<!-- ============ 5 ============ -->
+<h2 id="configuracion"><span class="num">5</span>Configuración del negocio</h2>
+<p class="intro">Menú <span class="menu">Configuración</span> (abajo, en “Sistema”). Aquí se definen los datos que aparecen en los documentos y algunas preferencias.</p>
+<figure><img src="img/03_configuracion.png" alt="Configuración: datos del negocio"><figcaption>Datos del negocio y respaldo</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Datos del negocio:</b> nombre comercial, eslogan, RIF, teléfono, email, redes y dirección. Salen en el encabezado de recibos y cotizaciones.</li>
+    <li><span class="m">2</span><b>Subir logo:</b> elige la imagen del logo (mejor en PNG con fondo transparente). Aparece en el menú y en los PDF. Se guarda al instante.</li>
+    <li><span class="m">3</span><b>Descargar respaldo:</b> guarda una copia de toda la información (ver capítulo 19).</li>
+</ul>
+<figure><img src="img/04_configuracion_preferencias.png" alt="Configuración: preferencias"><figcaption>Preferencias, bolívares y vista previa de documentos</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Margen objetivo (%):</b> la ganancia que quieres obtener sobre el precio de venta. Con él SubliApp te sugiere precios (capítulo 8). Un 50% significa que de cada $10 que cobras, $5 son ganancia.</li>
+    <li><span class="m">2</span><b>Moneda de los PDF:</b> la opción que viene marcada al generar un recibo o presupuesto (solo $, solo Bs o ambas). Siempre se puede cambiar en el momento.</li>
+    <li><span class="m">3</span><b>Vista previa:</b> muestra cómo se ve un recibo o una cotización con tus datos, sin necesidad de crear una venta.</li>
+</ul>
+<p>Otras opciones de esta pantalla:</p>
+<ul>
+    <li><b>Símbolo de moneda:</b> normalmente <b>$</b>. Es la moneda en la que se guardan todos los precios.</li>
+    <li><b>Validez de cotizaciones:</b> cuántos días es válido un presupuesto (por defecto 15).</li>
+    <li><b>Condiciones de las cotizaciones:</b> texto que sale al final de cada presupuesto (anticipo, tiempos, etc.).</li>
+    <li><b>Mensaje al pie del recibo:</b> por ejemplo “¡Gracias por tu compra!”.</li>
+</ul>
+<div class="caja importante">Después de cambiar datos o preferencias, presiona <span class="boton">Guardar configuración</span> al final de la página.</div>
+
+<!-- ============ 6 ============ -->
+<h2 id="tasa"><span class="num">6</span>Tasa del día y bolívares</h2>
+<p class="intro">En SubliApp <b>todos los precios y costos se guardan en dólares</b>. Así la ganancia no “se mueve” cuando cambia el tipo de cambio. Para cobrar, presupuestar o emitir recibos en bolívares se usa la <b>tasa del día</b>, que cargas tú.</p>
+<div class="diagrama">
+<svg viewBox="0 0 760 120" role="img" aria-label="Conversión de dólares a bolívares">
+    <g font-family="Inter,Helvetica" text-anchor="middle">
+        <rect x="10" y="20" width="200" height="80" rx="14" fill="#eef3ff" stroke="#2347c8"/><text x="110" y="52" font-size="13" fill="#475569">Precio guardado</text><text x="110" y="80" font-size="24" font-weight="800" fill="#1b2a80">$10,00</text>
+        <text x="250" y="70" font-size="30" fill="#94a3b8">×</text>
+        <rect x="290" y="20" width="180" height="80" rx="14" fill="#fffbeb" stroke="#f59e0b"/><text x="380" y="52" font-size="13" fill="#475569">Tasa del día</text><text x="380" y="80" font-size="24" font-weight="800" fill="#b45309">36,50</text>
+        <text x="510" y="70" font-size="30" fill="#94a3b8">=</text>
+        <rect x="550" y="20" width="200" height="80" rx="14" fill="#ecfdf5" stroke="#059669"/><text x="650" y="52" font-size="13" fill="#475569">Se muestra / cobra</text><text x="650" y="80" font-size="24" font-weight="800" fill="#047857">Bs 365,00</text>
+    </g>
+</svg>
+</div>
+<h3>Cargar o actualizar la tasa (todos los días)</h3>
+<ol class="pasos">
+    <li>Haz clic en el recuadro de la <b>tasa</b>, arriba a la derecha (si no hay tasa dice <span class="boton" style="background:#fef3c7;color:#92400e">Cargar tasa del día</span>; si está desactualizada aparece en amarillo con la palabra “Actualizar tasa”).</li>
+    <li>Escribe cuántos bolívares vale 1 dólar hoy (por ejemplo la tasa oficial del BCV): <b>36.50</b>.</li>
+    <li>Presiona <span class="boton">Guardar tasa</span>.</li>
+</ol>
+<figure><img src="img/05_tasa_del_dia.png" alt="Ventana de la tasa del día"><figcaption>Ventana para cargar la tasa, con historial</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span>Aquí escribes la tasa. La fecha viene con el día de hoy; puedes cambiarla para cargar una tasa de otro día.</li>
+    <li><span class="m">2</span>Un ejemplo te confirma que la escribiste bien (cuánto serían $10 en bolívares).</li>
+</ul>
+<h3>¿Dónde se usan los bolívares?</h3>
+<table>
+    <tr><th style="width:32%">Lugar</th><th>Qué hace</th></tr>
+    <tr><td>Nueva venta y cotización</td><td>Muestran el total equivalente en Bs. Cada venta y cada cotización <b>guarda la tasa usada</b>, así al reimprimirla sale igual.</td></tr>
+    <tr><td>Abonos</td><td>Permiten registrar que el cliente pagó en bolívares (por ejemplo, pago móvil). El programa lo convierte a dólares con la tasa.</td></tr>
+    <tr><td>Recibos y cotizaciones en PDF</td><td>Puedes generarlos en dólares, en bolívares o en ambas monedas, indicando la tasa.</td></tr>
+    <tr><td>Mensajes de WhatsApp</td><td>Incluyen el saldo en bolívares a la tasa del día.</td></tr>
+</table>
+<div class="caja consejo"><b>¿No trabajas con bolívares?</b> En <span class="menu">Configuración</span> → “Bolívares y tasa del día” desmarca <b>Activado</b>. La tasa desaparece de todas las pantallas.</div>
+
+<!-- ============ 7 ============ -->
+<h2 id="inventario"><span class="num">7</span>Inventario de insumos</h2>
+<p class="intro">Menú <span class="menu">Inventario</span>. Aquí están todos los materiales con los que se fabrican los productos. A los materiales los llamamos <b>insumos</b>.</p>
+<figure><img src="img/06_inventario.png" alt="Inventario"><figcaption>Lista de insumos</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Resumen:</b> cuántos insumos hay, cuánto dinero hay invertido en inventario y cuántos están bajos o en negativo.</li>
+    <li><span class="m">2</span><b>Filtros:</b> ver todos, solo consumibles, solo sustratos o solo los que tienen stock bajo.</li>
+    <li><span class="m">3</span><b>Buscador</b> por nombre.</li>
+    <li><span class="m">4</span><b>Estado del stock:</b> <span class="etq e-verde">Óptimo</span> hay suficiente · <span class="etq e-ambar">Alerta</span> llegó al mínimo · <span class="etq e-rojo">Crítico</span> queda la mitad del mínimo o menos. Las filas críticas se resaltan en rojo.</li>
+    <li><span class="m">5</span><b>Acciones:</b> 🕓 historial y mermas (kárdex) · ✏️ editar · 🗑️ eliminar.</li>
+</ul>
+<h3>Registrar un insumo nuevo</h3>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nuevo Insumo</span>.</li>
+    <li>Completa el formulario (ver explicación de cada campo abajo).</li>
+    <li>Presiona <span class="boton">Guardar</span>.</li>
+</ol>
+<figure><img src="img/07_insumo_nuevo.png" alt="Formulario de insumo"><figcaption>Formulario de nuevo insumo</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Categoría:</b> <b>Sustrato</b> es el objeto que se personaliza (taza, franela, gorra, mouse pad). <b>Consumible</b> es lo que se gasta en el proceso (tinta, papel, cinta).</li>
+    <li><span class="m">2</span><b>Unidad de medida:</b> cómo lo cuentas: <b>und</b> (unidades), <b>ml</b> (mililitros), <b>hoja</b>, <b>m</b> (metros)…</li>
+    <li><span class="m">3</span><b>Costo unitario:</b> cuánto te cuesta <b>una</b> unidad, en dólares. Si un paquete de 100 hojas cuesta $8, el costo por hoja es <b>0.08</b>. Si un frasco de 1.000 ml de tinta cuesta $4, el costo por ml es <b>0.004</b>.</li>
+    <li><span class="m">4</span><b>Stock mínimo:</b> cuando el inventario llegue a esta cantidad, SubliApp te avisará que hay que comprar.</li>
+</ul>
+<div class="caja consejo"><b>¿Cómo calculo el costo unitario?</b> Divide lo que pagaste entre la cantidad que trae: <b>precio del paquete ÷ cantidad</b>. Ejemplo: caja de 36 tazas a $63 → 63 ÷ 36 = <b>1.75</b> por taza.</div>
+<h3>Kárdex: el historial de cada insumo</h3>
+<p>El botón 🕓 de cada insumo abre su <b>kárdex</b>: la lista de todo lo que entró y salió, con fecha y motivo. Así siempre sabes por qué cambió el stock.</p>
+<figure><img src="img/08_kardex.png" alt="Kárdex de un insumo"><figcaption>Kárdex con el registro de una merma</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Registrar merma o ajuste:</b> usa <b>Merma</b> cuando algo se daña o se pierde (una taza rota, una franela manchada). Usa <b>Ajuste (+)</b> o <b>Ajuste (−)</b> cuando, al contar, encuentras más o menos de lo que dice el sistema. Escribe la cantidad, el motivo y presiona <span class="boton">Registrar</span>.</li>
+    <li><span class="m">2</span><b>Historial:</b> en verde lo que entró (compras, ajustes positivos) y en rojo lo que salió (ventas con su número VEN-, mermas). La columna “Saldo” es cuánto quedó después de cada movimiento.</li>
+</ul>
+<div class="caja importante"><b>No hace falta descontar a mano lo que se usa en cada pedido.</b> Al registrar una venta, SubliApp descuenta automáticamente los insumos según la receta del producto. Las mermas son solo para pérdidas o daños.</div>
+<p><b>Eliminar un insumo:</b> solo es posible si ningún producto lo usa en su receta. Si lo intentas, el programa te dirá en qué productos está para que lo quites primero.</p>
+
+<!-- ============ 8 ============ -->
+<h2 id="productos"><span class="num">8</span>Productos, recetas y precios</h2>
+<p class="intro">Menú <span class="menu">Prod. y Precios</span>. Aquí está el catálogo de lo que vendes. Cada producto tiene una <b>receta</b>: la lista de insumos que se usan para fabricar <b>una unidad</b>.</p>
+<div class="diagrama">
+<svg viewBox="0 0 820 170" role="img" aria-label="Cómo se calcula la ganancia">
+    <g font-family="Inter,Helvetica">
+        <rect x="10" y="10" width="300" height="150" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+        <text x="28" y="38" font-size="14" font-weight="700" fill="#1b2a80">Receta de “Taza personalizada”</text>
+        <text x="28" y="66" font-size="13" fill="#475569">1 taza blanca × $1,80 (+5% merma)</text><text x="292" y="66" font-size="13" text-anchor="end" fill="#1e293b">$1,89</text>
+        <text x="28" y="88" font-size="13" fill="#475569">1 hoja de papel × $0,08 (+10%)</text><text x="292" y="88" font-size="13" text-anchor="end" fill="#1e293b">$0,09</text>
+        <text x="28" y="110" font-size="13" fill="#475569">4 ml de tinta × $0,004</text><text x="292" y="110" font-size="13" text-anchor="end" fill="#1e293b">$0,02</text>
+        <line x1="28" y1="122" x2="292" y2="122" stroke="#cbd5e1"/>
+        <text x="28" y="145" font-size="14" font-weight="700" fill="#e11d48">Costo de producción</text><text x="292" y="145" font-size="14" font-weight="700" text-anchor="end" fill="#e11d48">$2,00</text>
+        <g text-anchor="middle">
+            <text x="350" y="92" font-size="28" fill="#94a3b8">→</text>
+            <rect x="390" y="35" width="130" height="90" rx="14" fill="#eef3ff" stroke="#2347c8"/><text x="455" y="65" font-size="12" fill="#475569">Precio de venta</text><text x="455" y="95" font-size="22" font-weight="800" fill="#1b2a80">$8,50</text>
+            <text x="545" y="88" font-size="28" fill="#94a3b8">−</text>
+            <rect x="570" y="35" width="100" height="90" rx="14" fill="#fff1f2" stroke="#e11d48"/><text x="620" y="65" font-size="12" fill="#475569">Costo</text><text x="620" y="95" font-size="22" font-weight="800" fill="#e11d48">$2,00</text>
+            <text x="692" y="88" font-size="28" fill="#94a3b8">=</text>
+            <rect x="710" y="35" width="100" height="90" rx="14" fill="#ecfdf5" stroke="#059669"/><text x="760" y="65" font-size="12" fill="#475569">Ganancia</text><text x="760" y="95" font-size="22" font-weight="800" fill="#047857">$6,50</text>
+            <text x="600" y="152" font-size="13" fill="#475569">Margen = ganancia ÷ precio = 6,50 ÷ 8,50 = <tspan font-weight="700" fill="#047857">76%</tspan></text>
+        </g>
+    </g>
+</svg>
+</div>
+<figure><img src="img/09_productos.png" alt="Lista de productos"><figcaption>Lista de precios con costo, precio sugerido y margen</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Aviso de margen:</b> te indica si algún producto deja menos ganancia que tu margen objetivo.</li>
+    <li><span class="m">2</span><b>Precio sugerido:</b> el precio al que deberías vender para lograr tu margen objetivo. Si tu precio está por debajo, aparece en color ámbar.</li>
+    <li><span class="m">3</span><b>Margen:</b> <span class="etq e-verde">verde</span> cumple tu objetivo · <span class="etq e-ambar">ámbar</span> está por debajo · <span class="etq e-rojo">rojo</span> se pierde dinero.</li>
+</ul>
+<p>Con el botón <b>“Recetas y márgenes”</b> ves cada producto como una tarjeta con el detalle de su receta y lo que cuesta cada insumo.</p>
+<h3>Crear un producto con su receta</h3>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nuevo Producto</span>.</li>
+    <li>Escribe el <b>nombre</b> (ej. “Taza 11oz personalizada”) y la <b>categoría</b> (ej. “Tazas”).</li>
+    <li>Presiona <b>“+ Añadir insumo”</b> por cada material que lleva una unidad del producto: busca el insumo escribiendo su nombre, indica la <b>cantidad</b> y, si quieres, el <b>% de merma</b>.</li>
+    <li>Escribe el <b>precio de venta</b> o presiona <b>“Usar”</b> para tomar el precio sugerido.</li>
+    <li>Revisa el costo y el margen que se calculan solos y presiona <span class="boton">Guardar</span>.</li>
+</ol>
+<figure><img src="img/10_producto_receta.png" alt="Formulario de producto"><figcaption>Formulario de producto con receta</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Receta:</b> insumo, cantidad por unidad (la unidad de medida aparece al lado) y % de merma.</li>
+    <li><span class="m">2</span><b>Añadir insumo</b> a la receta.</li>
+    <li><span class="m">3</span><b>Precio de venta.</b> A la derecha ves en vivo el costo, el margen y el precio sugerido.</li>
+    <li><span class="m">4</span><b>Usar:</b> copia el precio sugerido al campo de precio.</li>
+</ul>
+<div class="caja consejo"><b>¿Qué es el % de merma?</b> Es el desperdicio normal del proceso. Si de cada 10 hojas de papel 1 sale mal, la merma del papel es 10%. SubliApp lo suma al costo para que tu precio cubra esas pérdidas.</div>
+<div class="caja bien"><b>Cambios de costo automáticos.</b> Cuando registras una compra con un precio distinto, el costo del insumo se actualiza y todos los productos que lo usan recalculan su costo y margen. Revisa esta pantalla después de compras importantes para ajustar precios.</div>
+
+<!-- ============ 9 ============ -->
+<h2 id="clientes"><span class="num">9</span>Clientes</h2>
+<p class="intro">Menú <span class="menu">Clientes</span>. El directorio de clientes con su historial de compras y lo que deben.</p>
+<figure><img src="img/11_clientes.png" alt="Lista de clientes"><figcaption>Directorio de clientes</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Fecha especial</b> (cumpleaños, aniversario). El botón de WhatsApp abre un mensaje de felicitación ya escrito.</li>
+    <li><span class="m">2</span><b>Saldo:</b> cuánto debe el cliente en total. El filtro <b>“Con saldo”</b> muestra solo los que deben.</li>
+    <li><span class="m">3</span><b>Acciones:</b> 🛒 nueva venta para ese cliente · ✏️ editar · 🗑️ eliminar.</li>
+</ul>
+<p>Haz clic en el <b>nombre</b> de un cliente para ver su ficha: datos de contacto, total comprado, saldo e historial de todos sus pedidos.</p>
+<h3>Registrar un cliente</h3>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nuevo Cliente</span>.</li>
+    <li>Escribe nombre o empresa, WhatsApp, email (opcional) y, si la conoces, una fecha especial con su tipo (cumpleaños, aniversario…).</li>
+    <li>En <b>Notas</b> puedes anotar preferencias: talla, colores, cómo los conociste…</li>
+    <li>Presiona <span class="boton">Guardar</span>.</li>
+</ol>
+<figure><img src="img/12_cliente_formulario.png" alt="Formulario de cliente"><figcaption>Formulario de cliente</figcaption></figure>
+<div class="caja consejo"><b>Atajo:</b> no hace falta crear el cliente antes de vender. En la nueva venta escribe su nombre y elige <b>“+ Crear cliente”</b>. Luego completas su teléfono aquí.</div>
+<div class="caja consejo"><b>Teléfono para WhatsApp:</b> escríbelo como lo usas normalmente (<b>0414-1234567</b>). SubliApp lo convierte solo al formato internacional.</div>
+<p><b>Eliminar un cliente</b> solo es posible si no tiene ventas, para no perder el historial.</p>
+
+<!-- ============ 10 ============ -->
+<h2 id="ventas"><span class="num">10</span>Ventas</h2>
+<p class="intro">Menú <span class="menu">Ventas</span>. Cada pedido confirmado se registra aquí. Al guardarlo, SubliApp descuenta los insumos del inventario, guarda el costo y la ganancia, y el pedido aparece en Producción.</p>
+<figure><img src="img/13_ventas.png" alt="Lista de ventas"><figcaption>Lista de ventas</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Buscador:</b> por número de venta (VEN-0005), cliente, producto o notas.</li>
+    <li><span class="m">2</span><b>Filtros:</b> todas · con saldo pendiente · sin entregar.</li>
+    <li><span class="m">3</span><b>Entrega:</b> <span class="etq e-rojo">Atrasado</span> ya pasó la fecha · <span class="etq e-ambar">Entrega hoy</span> / <span class="etq e-ambar">mañana</span> · o la fecha comprometida.</li>
+    <li><span class="m">4</span><b>Estado de producción:</b> puedes cambiarlo directamente desde esta lista.</li>
+    <li><span class="m">5</span><b>Pago:</b> <span class="etq e-verde">✓ Pagado</span> o <span class="etq e-rojo">Debe $…</span>. Haz clic para ver y registrar abonos.</li>
+    <li><span class="m">6</span><b>Acciones:</b> 📄 recibo PDF · WhatsApp · ✏️ editar · 🗑️ anular.</li>
+</ul>
+<h3>Registrar una venta nueva, paso a paso</h3>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nueva Venta</span> (está en Ventas, Producción e Inicio).</li>
+    <li><b>Cliente:</b> escribe unas letras del nombre y elígelo. Si es nuevo, elige <b>“+ Crear cliente «nombre»”</b>. Si es una venta rápida sin datos, elige <b>“Mostrador”</b>.</li>
+    <li><b>Productos:</b> en la primera línea busca el producto, ajusta la <b>cantidad</b> y, si hiciste un precio especial, el <b>precio</b>. Para más productos presiona <b>“+ Añadir producto”</b>. La ✕ quita una línea.</li>
+    <li><b>Fecha de entrega</b> (recomendado): el día comprometido con el cliente. Con ella el programa te avisa de los pedidos atrasados.</li>
+    <li><b>Notas del pedido:</b> todo lo que el taller debe saber: colores, tallas, textos, fotos…</li>
+    <li><b>Abono inicial</b> (si el cliente dejó anticipo): elige si pagó en $ o en Bs, escribe el monto (o usa los botones <b>50%</b> / <b>Total</b>) y el método de pago.</li>
+    <li>Revisa el <b>total</b> (y su equivalente en Bs) y presiona <span class="boton">Registrar venta</span>.</li>
+</ol>
+<figure><img src="img/14_venta_nueva.png" alt="Formulario de nueva venta"><figcaption>Nueva venta con abono en bolívares</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span>Cliente (con buscador).</li>
+    <li><span class="m">2</span>Productos, cantidades y precios.</li>
+    <li><span class="m">3</span>Fecha de entrega comprometida.</li>
+    <li><span class="m">4</span>Abono inicial: moneda, monto, método de pago.</li>
+    <li><span class="m">5</span>Total en $ y su equivalente en Bs; a la izquierda, la tasa que se guardará con la venta.</li>
+</ul>
+<div class="caja importante"><b>Aviso de stock insuficiente.</b> Si no alcanzan los insumos para el pedido, aparece un recuadro amarillo indicando qué falta. Puedes registrar la venta igual (el stock quedará en negativo), pero es una señal para comprar material.</div>
+<h3>Editar una venta</h3>
+<p>Con ✏️ puedes cambiar cliente, fechas, productos, cantidades o precios. El inventario se corrige solo: devuelve lo que la venta había descontado y descuenta lo nuevo.</p>
+<h3>Anular una venta</h3>
+<p>Con 🗑️ se anula la venta: los insumos vuelven al inventario y se eliminan sus abonos. Úsalo solo si el pedido se canceló o se registró por error; <b>no se puede deshacer</b>.</p>
+
+<!-- ============ 11 ============ -->
+<h2 id="abonos"><span class="num">11</span>Abonos y cobros</h2>
+<p class="intro">Un <b>abono</b> es cada pago que hace el cliente: el anticipo y los pagos siguientes. SubliApp lleva la cuenta del <b>saldo pendiente</b> de cada venta.</p>
+<h3>Registrar un abono</h3>
+<ol class="pasos">
+    <li>En <span class="menu">Ventas</span>, haz clic en la etiqueta <span class="etq e-rojo">Debe $…</span> de la venta (también desde Producción, Clientes o Inicio).</li>
+    <li>Revisa el total, lo abonado y el saldo (con su equivalente en Bs).</li>
+    <li>En “Registrar abono” elige la fecha, si paga en <b>$</b> o en <b>Bs</b>, el monto (viene lleno con el saldo completo) y el método de pago. En la nota puedes poner el número de referencia.</li>
+    <li>Presiona <span class="boton">Registrar abono</span>.</li>
+</ol>
+<figure><img src="img/15_abonos.png" alt="Ventana de abonos"><figcaption>Abonos de una venta, registrando un pago en bolívares</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Resumen:</b> total, abonado y saldo, con su valor en Bs a la tasa del día.</li>
+    <li><span class="m">2</span><b>Abonos registrados.</b> Los pagos en Bs muestran lo que entregó el cliente y la tasa usada. La ✕ elimina un abono cargado por error.</li>
+    <li><span class="m">3</span><b>Registrar abono.</b> Si paga en Bs, aparece la tasa y debajo la conversión: “Bs 620,50 ÷ 36,50 = $17,00 se abonarán”.</li>
+</ul>
+<div class="caja consejo"><b>Pagos en bolívares:</b> escribe exactamente lo que recibiste en Bs (por ejemplo el monto del pago móvil). SubliApp lo convierte a dólares con la tasa indicada y lo descuenta del saldo. Si hay una diferencia de céntimos por redondeo, se ajusta sola.</div>
+<p>Cuando el saldo llega a cero, la venta muestra <span class="etq e-verde">✓ Pagado</span> y el recibo sale con el sello <b>PAGADO</b>.</p>
+
+<!-- ============ 12 ============ -->
+<h2 id="recibos"><span class="num">12</span>Recibos en PDF y WhatsApp</h2>
+<h3>Descargar un recibo</h3>
+<ol class="pasos">
+    <li>En <span class="menu">Ventas</span>, presiona el ícono 📄 de la venta (o “Descargar recibo” en la ventana de abonos).</li>
+    <li>Elige la <b>moneda</b> del documento y revisa la <b>tasa</b> (puedes usar la de la venta, la del día o escribir otra).</li>
+    <li>Presiona <span class="boton">Generar PDF</span>. El archivo se guarda en la carpeta <b>Descargas</b> con un nombre como <i>Recibo_VEN-0002_Colegio_San_Jose.pdf</i>.</li>
+</ol>
+<figure><img src="img/16_elegir_moneda.png" alt="Elegir moneda del documento"><figcaption>Elección de moneda y tasa al generar un PDF</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Solo en $</b> · <b>Solo en Bs</b> (todos los precios convertidos) · <b>Ambas</b> (precios en $ y totales también en Bs).</li>
+    <li><span class="m">2</span><b>Tasa:</b> los botones de abajo copian la tasa guardada en la venta o la tasa del día.</li>
+</ul>
+<div class="dos">
+    <figure class="doc"><img src="img/17_recibo_pdf.png" alt="Ejemplo de recibo"><figcaption>Recibo en ambas monedas, con abono y saldo pendiente</figcaption></figure>
+    <div>
+        <p>El recibo incluye:</p>
+        <ul>
+            <li>Logo y datos del negocio (de Configuración).</li>
+            <li>Número de venta, fecha y fecha de entrega.</li>
+            <li>Datos del cliente y estado del pedido.</li>
+            <li>Detalle de productos, cantidades y precios.</li>
+            <li>Total, abonos recibidos (con método y tasa) y saldo pendiente.</li>
+            <li>Si está pagado, el sello <b>PAGADO</b>.</li>
+            <li>Las notas del pedido y la tasa usada.</li>
+        </ul>
+        <div class="caja importante">Los recibos y cotizaciones de SubliApp son <b>documentos no fiscales</b>. Si el cliente necesita factura fiscal, debe emitirse con la imprenta o máquina fiscal autorizada por el SENIAT.</div>
+    </div>
+</div>
+<h3>Avisar al cliente por WhatsApp</h3>
+<p>El ícono de WhatsApp (en Ventas y en las tarjetas de Producción) abre WhatsApp con un mensaje ya escrito según el estado del pedido. Incluye el detalle, el total, lo abonado y el saldo, también en bolívares. Ejemplo cuando el pedido está <span class="etq e-violeta">Listo</span>:</p>
+<p style="background:#dcfce7;border-radius:12px;padding:10px 14px;max-width:520px;font-size:14px">Hola María, ¡tu pedido #VEN-0003 (2x Taza mágica personalizada, 3x Taza 11oz personalizada) está listo para retirar!<br>Total: $49,50<br><br>Zafiro Lab</p>
+<p>Solo tienes que revisar el mensaje y presionar enviar en WhatsApp. Si quieres, adjunta también el PDF del recibo.</p>
+<div class="caja consejo">El ícono de WhatsApp aparece solo si el cliente tiene teléfono registrado.</div>
+
+<!-- ============ 13 ============ -->
+<h2 id="cotizaciones"><span class="num">13</span>Cotizaciones (presupuestos)</h2>
+<p class="intro">Menú <span class="menu">Cotizaciones</span>. Para cuando un cliente pide precio antes de confirmar. Las cotizaciones <b>no descuentan inventario</b>; cuando el cliente acepta, se convierten en venta con un clic.</p>
+<figure><img src="img/18_cotizaciones.png" alt="Lista de cotizaciones"><figcaption>Lista de cotizaciones</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Estado:</b> <span class="etq e-azul">Pendiente</span> · <span class="etq e-ambar">Vence en X días</span> · <span class="etq e-gris">Vencida</span> · <span class="etq e-verde">✓ Venta VEN-…</span> (ya se convirtió).</li>
+    <li><span class="m">2</span><b>Acciones:</b> 📄 PDF · WhatsApp · 🛒 convertir en venta · ✏️ editar · ⧉ duplicar · 🗑️ eliminar.</li>
+</ul>
+<h3>Crear una cotización</h3>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nueva Cotización</span>.</li>
+    <li><b>Cliente o prospecto:</b> búscalo en la lista o simplemente <b>escribe el nombre</b> de una persona que aún no es cliente.</li>
+    <li>Agrega las líneas. Puedes elegir un producto del catálogo o <b>escribir cualquier descripción</b> (por ejemplo un diseño especial o un servicio) con su precio.</li>
+    <li>Revisa la validez (días) y la tasa; agrega notas para el cliente si hace falta.</li>
+    <li>Presiona <span class="boton">Guardar y descargar PDF</span>, elige la moneda y se descarga el presupuesto.</li>
+</ol>
+<figure><img src="img/19_cotizacion_formulario.png" alt="Formulario de cotización"><figcaption>Cotización con una línea fuera del catálogo</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span>Cliente registrado o nombre libre de un prospecto.</li>
+    <li><span class="m">2</span>Una línea escrita a mano (no está en el catálogo).</li>
+    <li><span class="m">3</span>Días de validez: la fecha de vencimiento se calcula sola.</li>
+</ul>
+<div class="dos">
+    <figure class="doc"><img src="img/20_cotizacion_pdf.png" alt="Ejemplo de cotización en bolívares"><figcaption>Cotización generada en bolívares</figcaption></figure>
+    <div>
+        <h3 style="margin-top:0">Convertir en venta</h3>
+        <ol class="pasos">
+            <li>Presiona 🛒 en la cotización aceptada.</li>
+            <li>Se abre una venta nueva con el cliente, los productos y los <b>precios cotizados</b>.</li>
+            <li>Si había líneas escritas a mano, elige el producto del catálogo que corresponde (hace falta para descontar inventario) o quítalas.</li>
+            <li>Agrega fecha de entrega y abono, y presiona <span class="boton">Registrar venta</span>.</li>
+        </ol>
+        <p>Si el cliente era un prospecto, al registrar la venta se crea como cliente automáticamente.</p>
+    </div>
+</div>
+<div class="caja consejo"><b>Duplicar</b> (⧉) sirve para hacer una cotización parecida a otra: copia todo y solo cambias lo necesario.</div>
+
+<!-- ============ 14 ============ -->
+<h2 id="produccion"><span class="num">14</span>Producción</h2>
+<p class="intro">Menú <span class="menu">Producción</span>. Un tablero con una columna por etapa. Cada tarjeta es un pedido; las más urgentes aparecen arriba.</p>
+<table>
+    <tr><th>Columna</th><th>Significa</th></tr>
+    <tr><td><span class="etq e-azul">1. Por Diseñar</span></td><td>Pedido nuevo: hay que preparar el diseño.</td></tr>
+    <tr><td><span class="etq e-ambar">2. Imprimiendo</span></td><td>En proceso de impresión y planchado.</td></tr>
+    <tr><td><span class="etq e-violeta">3. Listo</span></td><td>Terminado, esperando que el cliente lo retire. ¡Avísale!</td></tr>
+    <tr><td><span class="etq e-verde">4. Entregado</span></td><td>El cliente ya lo tiene. Aquí se ven los entregados de los últimos 30 días.</td></tr>
+</table>
+<figure><img src="img/21_produccion.png" alt="Tablero de producción"><figcaption>Tablero de producción</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Alerta de entrega:</b> en rojo los atrasados, en ámbar los que se entregan hoy o mañana. Las tarjetas atrasadas tienen borde rojo.</li>
+    <li><span class="m">2</span><b>Botón para avanzar</b> a la siguiente etapa (“Listo →”). También puedes <b>arrastrar</b> la tarjeta con el mouse a otra columna.</li>
+    <li><span class="m">3</span><b>Diseños:</b> adjunta imágenes del diseño o enlaces de Google Drive para que el taller los tenga a mano.</li>
+    <li><span class="m">4</span><b>WhatsApp:</b> avisa al cliente del estado de su pedido.</li>
+</ul>
+<p>Si la venta tiene saldo pendiente, la tarjeta lo muestra en rojo. Al pasar a <b>Entregado</b> un pedido que todavía debe dinero, el programa te lo recuerda.</p>
+
+<!-- ============ 15 ============ -->
+<h2 id="compras"><span class="num">15</span>Compras a proveedores</h2>
+<p class="intro">Menú <span class="menu">Compras</span>. Cada vez que llega mercancía (tazas, tinta, papel…) regístrala aquí: el inventario sube y el costo de los insumos se actualiza.</p>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nueva Compra</span>.</li>
+    <li>Escribe el <b>proveedor</b> (los anteriores aparecen como sugerencia) y la <b>fecha</b>.</li>
+    <li>Por cada insumo de la factura: búscalo, escribe la <b>cantidad</b> y el <b>costo unitario</b> que pagaste (viene propuesto el costo actual; cámbialo por el de la factura).</li>
+    <li>Revisa el total y presiona <span class="boton">Registrar compra</span>.</li>
+</ol>
+<figure><img src="img/22_compra_nueva.png" alt="Nueva compra"><figcaption>Registro de una compra</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span>Proveedor.</li>
+    <li><span class="m">2</span>Insumos comprados: cantidad y costo por unidad (en $).</li>
+</ul>
+<div class="caja consejo"><b>Costo promedio.</b> Si tenías 10 tazas a $2 y compras 10 más a $3, el nuevo costo de la taza será $2,50 (el promedio). Así los costos reflejan lo que realmente pagaste.</div>
+<p><b>¿Te equivocaste?</b> Con ✏️ puedes corregir la compra y con 🗑️ anularla: el inventario y el costo se ajustan automáticamente.</p>
+<figure><img src="img/23_compras.png" alt="Historial de compras"><figcaption>Historial de compras</figcaption></figure>
+
+<!-- ============ 16 ============ -->
+<h2 id="gastos"><span class="num">16</span>Gastos del negocio</h2>
+<p class="intro">Menú <span class="menu">Gastos</span>. Todo lo que el negocio paga y <b>no</b> es material para fabricar: alquiler, electricidad, internet, sueldos, transporte, publicidad, mantenimiento…</p>
+<ol class="pasos">
+    <li>Presiona <span class="boton">Nuevo Gasto</span>.</li>
+    <li>Escribe la fecha, el monto en $, la categoría (elige de la lista o escribe una nueva) y una descripción opcional.</li>
+    <li>Presiona <span class="boton">Guardar</span>.</li>
+</ol>
+<figure><img src="img/24_gastos.png" alt="Gastos"><figcaption>Gastos del mes</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span>Elige el mes que quieres ver (o “Ver todos”).</li>
+    <li><span class="m">2</span>Total del mes y cuánto se fue en cada categoría.</li>
+</ul>
+<div class="caja importante"><b>Las compras de insumos no van aquí</b>: se registran en Compras. Los gastos se restan en Reportes para saber la <b>utilidad neta</b> (lo que realmente queda).</div>
+
+<!-- ============ 17 ============ -->
+<h2 id="reportes"><span class="num">17</span>Reportes y Excel</h2>
+<p class="intro">Menú <span class="menu">Reportes</span>. Responde la pregunta más importante: <b>¿cuánto está ganando el negocio?</b></p>
+<figure><img src="img/25_reportes.png" alt="Reportes"><figcaption>Reporte del mes</figcaption></figure>
+<ul class="marcas">
+    <li><span class="m">1</span><b>Período:</b> este mes, mes anterior, últimos 3 meses, este año o un rango de fechas a tu elección.</li>
+    <li><span class="m">2</span><b>Indicadores</b> (explicados en la tabla de abajo).</li>
+    <li><span class="m">3</span><b>Exportar a Excel:</b> descarga toda la información del período en un archivo de Excel.</li>
+</ul>
+<table>
+    <tr><th style="width:28%">Indicador</th><th>Qué significa</th></tr>
+    <tr><td><b>Ventas</b></td><td>Todo lo vendido en el período (cobrado o no).</td></tr>
+    <tr><td><b>Costo de lo vendido</b></td><td>Lo que costaron los materiales de esos productos, según sus recetas.</td></tr>
+    <tr><td><b>Utilidad bruta</b></td><td>Ventas − costo de lo vendido. Lo que dejan los productos antes de pagar los gastos. El margen es el porcentaje que representa.</td></tr>
+    <tr><td><b>Gastos generales</b></td><td>Lo registrado en la sección Gastos.</td></tr>
+    <tr><td><b>Utilidad neta</b></td><td>Utilidad bruta − gastos. <b>Lo que realmente ganó el negocio.</b> Si es roja, el negocio perdió dinero en ese período.</td></tr>
+    <tr><td><b>Cobrado</b></td><td>Dinero que entró por abonos en el período, y cuánto falta por cobrar.</td></tr>
+</table>
+<p>Debajo encontrarás: el gráfico de los últimos 6 meses (ventas contra costos y gastos), la <b>rentabilidad por producto</b> (cuáles dejan más ganancia), los <b>mejores clientes</b>, los gastos por categoría y los cobros por método de pago.</p>
+<h3>El archivo de Excel</h3>
+<p>Contiene una hoja por tema, cada una como <b>tabla de Excel</b> con filtros: Resumen, Ventas (una fila por producto vendido, con costo, utilidad, margen y monto en Bs), Por producto, Cobros (con moneda y tasa), Por cobrar, Compras, Gastos, Inventario y Kárdex. Puedes ordenarlas, filtrarlas o hacer tablas dinámicas.</p>
+<div class="caja consejo">El costo de cada venta se guarda en el momento de vender. Por eso, si mañana sube la tinta, los reportes de meses anteriores no cambian.</div>
+
+<!-- ============ 18 ============ -->
+<h2 id="inicio"><span class="num">18</span>La pantalla de Inicio</h2>
+<p class="intro">Es lo primero que ves al abrir el programa: un resumen de lo que necesita atención hoy.</p>
+<figure><img src="img/02_inicio_paneles.png" alt="Paneles de Inicio"><figcaption>Paneles de entregas, fechas especiales, stock bajo y ventas recientes</figcaption></figure>
+<ul>
+    <li><b>Ventas y utilidad del mes</b>, comparadas con el mes anterior (flecha verde si subió, roja si bajó).</li>
+    <li><b>Por cobrar:</b> cuánto le deben los clientes en total. Haz clic para ver esas ventas.</li>
+    <li><b>Pedidos activos</b> y cuántos están atrasados.</li>
+    <li><b>Entregas</b> atrasadas y de los próximos 3 días.</li>
+    <li><b>Fechas especiales</b> de clientes de los próximos 7 días, con botón para felicitarlos por WhatsApp.</li>
+    <li><b>Stock bajo:</b> insumos que hay que comprar.</li>
+    <li><b>Ventas recientes</b> con su estado y pago.</li>
+    <li>Un <b>aviso amarillo</b> si hace más de 7 días que no descargas un respaldo.</li>
+</ul>
+
+<!-- ============ 19 ============ -->
+<h2 id="respaldos"><span class="num">19</span>Respaldos y seguridad</h2>
+<p class="intro">Toda la información vive en la PC, en la carpeta <b>SubliApp_datos</b> (junto al programa). Si la PC se daña o se la roban, solo un respaldo guardado <b>fuera de la PC</b> te salva.</p>
+<h3>Respaldos automáticos</h3>
+<p>Cada día, al abrir el programa, SubliApp guarda una copia en <b>SubliApp_datos\respaldos</b> y conserva las de los últimos 30 días. Son útiles si alguien borra algo por error, pero <b>no</b> protegen contra fallas de la PC.</p>
+<h3>Descargar un respaldo (hazlo cada semana)</h3>
+<ol class="pasos">
+    <li>Ve a <span class="menu">Configuración</span> y presiona <span class="boton">Descargar respaldo</span> (o el botón del aviso amarillo en Inicio).</li>
+    <li>Se guarda en <b>Descargas</b> un archivo como <i>SubliApp_respaldo_2026-11-15.db</i>.</li>
+    <li>Cópialo a un <b>pendrive</b> o súbelo a <b>Google Drive</b>.</li>
+</ol>
+<div class="caja consejo">Para un respaldo completo que incluya también las imágenes de los diseños, copia la carpeta <b>SubliApp_datos</b> entera al pendrive. El botón <span class="boton sec">Abrir carpeta de datos</span> de Configuración la abre directamente.</div>
+<h3>Restaurar un respaldo</h3>
+<ol class="pasos">
+    <li>Cierra SubliApp (cierra la ventana negra).</li>
+    <li>Copia el archivo de respaldo dentro de la carpeta <b>SubliApp_datos</b>.</li>
+    <li>Cambia su nombre a <b>subliapp.db</b>, reemplazando el que hay.</li>
+    <li>Abre SubliApp de nuevo.</li>
+</ol>
+<h3>Pasar SubliApp a otra computadora</h3>
+<p>Copia la carpeta completa del programa (con <b>SubliApp_datos</b> adentro) a la nueva PC y crea el acceso directo de <b>SubliApp.exe</b>. Todo seguirá igual.</p>
+<h3>Instalar una versión nueva del programa</h3>
+<p>Reemplaza todos los archivos de la carpeta del programa <b>excepto la carpeta SubliApp_datos</b>. Al abrir la nueva versión, tus datos se actualizan solos (antes se guarda una copia por seguridad).</p>
+<h3>Empezar de cero</h3>
+<p>Para borrar todos los datos (por ejemplo después de practicar), haz doble clic en <b>Borrar datos.bat</b> y escribe <b>BORRAR</b>. Antes de borrar se guarda una copia en la carpeta de respaldos. La configuración del negocio se conserva.</p>
+<div class="caja importante">Solo la PC donde está instalado SubliApp puede abrirlo; nadie más en la red ni en internet tiene acceso. Aun así, no dejes la PC sin contraseña de Windows.</div>
+
+<!-- ============ 20 ============ -->
+<h2 id="rutinas"><span class="num">20</span>Rutina diaria y semanal</h2>
+<div class="dos">
+<div>
+<h3>☀️ Cada día</h3>
+<ol class="pasos">
+    <li>Abrir SubliApp y actualizar la <b>tasa del día</b>.</li>
+    <li>Revisar <span class="menu">Inicio</span>: entregas, atrasos, cumpleaños y stock bajo.</li>
+    <li>Registrar cada pedido confirmado en <span class="menu">Ventas</span>, con su abono.</li>
+    <li>Mover los pedidos en <span class="menu">Producción</span> a medida que avanzan y avisar al cliente cuando estén <b>Listos</b>.</li>
+    <li>Registrar cada pago recibido como <b>abono</b>.</li>
+</ol>
+</div>
+<div>
+<h3>📅 Cada semana</h3>
+<ol class="pasos">
+    <li><b>Descargar el respaldo</b> y guardarlo en pendrive o Drive.</li>
+    <li>Revisar en <span class="menu">Ventas</span> el filtro <b>“Con saldo”</b> y cobrar lo pendiente.</li>
+    <li>Registrar las <b>compras</b> de la semana y los <b>gastos</b>.</li>
+    <li>Contar lo más importante del inventario y registrar <b>mermas o ajustes</b> si no coincide.</li>
+</ol>
+<h3>🗓️ Cada mes</h3>
+<ol class="pasos">
+    <li>Revisar <span class="menu">Reportes</span>: utilidad neta y productos más rentables.</li>
+    <li>Revisar en <span class="menu">Prod. y Precios</span> los productos por debajo del margen y ajustar precios.</li>
+    <li>Exportar el Excel del mes para el archivo del negocio.</li>
+</ol>
+</div>
+</div>
+
+<!-- ============ 21 ============ -->
+<h2 id="faq" class="faq"><span class="num">21</span>Preguntas frecuentes</h2>
+<div class="faq">
+<h3>La pantalla dice “No se pudo cargar la información”.</h3>
+<p>Seguramente se cerró la ventana negra. Ábrela de nuevo con doble clic en SubliApp y presiona <span class="boton">Reintentar</span>.</p>
+<h3>Hice doble clic en SubliApp y no pasó nada.</h3>
+<p>Si el programa ya estaba abierto, solo se abre otra pestaña del navegador. Busca la ventana negra en la barra de tareas o revisa las pestañas del navegador.</p>
+<h3>Me equivoqué en una venta.</h3>
+<p>Ábrela con ✏️ en Ventas y corrígela. El inventario se ajusta solo. Si fue un abono equivocado, elimínalo con la ✕ en la ventana de abonos y regístralo de nuevo.</p>
+<h3>El stock de un insumo está en negativo.</h3>
+<p>Significa que se vendió más de lo que había registrado. Registra la compra que falta o, si contaste físicamente, haz un <b>Ajuste (+)</b> en el kárdex.</p>
+<h3>¿Por qué no puedo eliminar un insumo o un cliente?</h3>
+<p>Para proteger la información: un insumo usado en recetas o un cliente con ventas no se puede borrar. El mensaje te dice qué hacer.</p>
+<h3>Cambió la tasa: ¿se modifican las ventas anteriores?</h3>
+<p>No. Cada venta y cotización guarda la tasa con la que se hizo. Al generar el PDF puedes elegir usar esa tasa o la del día.</p>
+<h3>El cliente pagó una parte en dólares y otra en bolívares.</h3>
+<p>Registra dos abonos: uno en $ y otro en Bs. El saldo se calcula solo.</p>
+<h3>¿Puedo usar SubliApp desde el celular u otra computadora?</h3>
+<p>Esta versión funciona en una sola PC. Para usarla en otra, hay que copiar la carpeta completa (capítulo 19).</p>
+<h3>El recibo, ¿sirve como factura?</h3>
+<p>No. Es un documento no fiscal (comprobante de pago). La factura fiscal debe emitirse con imprenta o máquina fiscal autorizada.</p>
+<h3>Las fechas en los campos aparecen como mm/dd/aaaa.</h3>
+<p>El formato de los campos de fecha depende del idioma del navegador. Si quieres verlas como dd/mm/aaaa, configura el navegador en español (Venezuela). En las listas y documentos SubliApp siempre muestra dd/mm/aaaa.</p>
+</div>
+
+<!-- ============ 22 ============ -->
+<h2 id="glosario"><span class="num">22</span>Glosario</h2>
+<dl class="glosario">
+    <dt>Abono</dt><dd>Cada pago que hace un cliente de una venta (anticipo o pagos posteriores).</dd>
+    <dt>Consumible</dt><dd>Insumo que se gasta en el proceso: tinta, papel, cinta térmica.</dd>
+    <dt>Costo de producción</dt><dd>Lo que cuesta fabricar una unidad de un producto, según su receta.</dd>
+    <dt>Costo promedio</dt><dd>Costo de un insumo que mezcla lo que costaba antes y lo que costó la última compra.</dd>
+    <dt>Folio</dt><dd>Número de cada documento: VEN-0001 (ventas), COT-0001 (cotizaciones), COM-0001 (compras). No se repiten nunca.</dd>
+    <dt>Insumo</dt><dd>Material con el que se fabrican los productos.</dd>
+    <dt>Kárdex</dt><dd>Historial de entradas y salidas de un insumo.</dd>
+    <dt>Margen</dt><dd>Porcentaje del precio de venta que es ganancia. Margen 50% = la mitad del precio es ganancia.</dd>
+    <dt>Margen objetivo</dt><dd>El margen que quieres lograr; se usa para sugerir precios.</dd>
+    <dt>Merma</dt><dd>Material que se pierde o se daña. En la receta, el % de desperdicio normal del proceso.</dd>
+    <dt>Mostrador</dt><dd>Venta rápida sin registrar los datos del cliente.</dd>
+    <dt>Receta</dt><dd>Lista de insumos y cantidades que lleva una unidad de un producto.</dd>
+    <dt>Saldo</dt><dd>Lo que falta por cobrar de una venta.</dd>
+    <dt>Stock</dt><dd>Cantidad disponible de un insumo.</dd>
+    <dt>Stock mínimo</dt><dd>Cantidad a partir de la cual el programa avisa que hay que comprar.</dd>
+    <dt>Sustrato</dt><dd>Objeto que se personaliza: taza, franela, gorra, mouse pad.</dd>
+    <dt>Tasa del día</dt><dd>Cuántos bolívares vale un dólar; la cargas tú cada día.</dd>
+    <dt>Utilidad bruta / neta</dt><dd>Bruta: ventas − costo de materiales. Neta: bruta − gastos del negocio.</dd>
+</dl>
+<p style="margin-top:40px;text-align:center;color:var(--gris);font-size:13px">SubliApp · Zafiro Lab — Sublimación y personalización</p>
+
+</main>
+</body>
+</html>

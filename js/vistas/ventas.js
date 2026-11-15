@@ -96,9 +96,9 @@ function montar(el) {
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold">
-                    <tr><th class="px-4 py-3">Venta</th><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Cliente</th>
-                        <th class="px-4 py-3">Detalle</th><th class="px-4 py-3">Entrega</th><th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Total</th><th class="px-4 py-3">Pago</th><th class="px-4 py-3"></th></tr>
+                    <tr><th class="px-3 py-3">Venta</th><th class="px-3 py-3">Cliente</th>
+                        <th class="px-3 py-3">Detalle</th><th class="px-3 py-3">Entrega</th><th class="px-3 py-3">Estado</th>
+                        <th class="px-3 py-3 text-right">Total</th><th class="px-3 py-3">Pago</th><th class="px-3 py-3"></th></tr>
                 </thead>
                 <tbody id="tbl-ventas" class="text-sm divide-y divide-slate-50"></tbody>
             </table>
@@ -119,26 +119,25 @@ function render() {
     document.getElementById('tbl-ventas').innerHTML = pag.items.map(v => {
         const cliente = Store.state.clientes.find(c => c.id === v.cliente_id);
         return `<tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-mono font-semibold text-indigo-600 whitespace-nowrap">${folioVenta(v)}</td>
-            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${fmtFecha(v.fecha)}</td>
-            <td class="px-4 py-3 font-medium text-slate-700 min-w-[8rem]">${esc(Store.nombreClienteVenta(v))}</td>
-            <td class="px-4 py-3 text-slate-600 max-w-[15rem]"><div class="truncate" title="${esc(detalleTexto(v))}">${esc(detalleTexto(v))}</div>${v.notas ? `<div class="text-xs text-slate-400 truncate" title="${esc(v.notas)}"><i class="fa-regular fa-note-sticky mr-1"></i>${esc(v.notas)}</div>` : ''}</td>
-            <td class="px-4 py-3 whitespace-nowrap">${badgeEntrega(v)}</td>
-            <td class="px-4 py-3">
+            <td class="px-3 py-3 whitespace-nowrap"><span class="font-mono font-semibold text-indigo-600">${folioVenta(v)}</span><span class="block text-xs text-slate-400">${fmtFecha(v.fecha)}</span></td>
+            <td class="px-3 py-3 font-medium text-slate-700 min-w-[8rem]">${esc(Store.nombreClienteVenta(v))}</td>
+            <td class="px-3 py-3 text-slate-600 max-w-[11rem]"><div class="truncate" title="${esc(detalleTexto(v))}">${esc(detalleTexto(v))}</div>${v.notas ? `<div class="text-xs text-slate-400 truncate" title="${esc(v.notas)}"><i class="fa-regular fa-note-sticky mr-1"></i>${esc(v.notas)}</div>` : ''}</td>
+            <td class="px-3 py-3 whitespace-nowrap">${badgeEntrega(v)}</td>
+            <td class="px-3 py-3">
                 <select onchange="App.cambiarEstadoVenta('${v.id}', this.value)" aria-label="Estado" class="text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer ${ESTADO_BADGE[v.estado]}">
                     ${Store.ESTADOS_PRODUCCION.map(e => `<option value="${e}" ${e === v.estado ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
             </td>
-            <td class="px-4 py-3 text-right font-bold text-slate-700 whitespace-nowrap">${fmt(Store.montoVenta(v))}</td>
-            <td class="px-4 py-3 whitespace-nowrap"><button onclick="App.openPagosModal('${v.id}')" title="Ver y registrar abonos">${badgeSaldo(v)}</button></td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
+            <td class="px-3 py-3 text-right font-bold text-slate-700 whitespace-nowrap">${fmt(Store.montoVenta(v))}</td>
+            <td class="px-3 py-3 whitespace-nowrap"><button onclick="App.openPagosModal('${v.id}')" title="Ver y registrar abonos">${badgeSaldo(v)}</button></td>
+            <td class="px-3 py-3 text-right whitespace-nowrap">
                 ${botonIcono(`App.descargarRecibo('${v.id}')`, 'fa-solid fa-file-pdf', 'Descargar recibo PDF')}
                 ${cliente?.telefono ? botonIcono(`App.enviarEstadoWhatsApp('${v.id}')`, 'fa-brands fa-whatsapp', 'Enviar estado por WhatsApp', 'hover:text-emerald-600') : ''}
                 ${botonIcono(`App.openVentaModal('${v.id}')`, 'fa-solid fa-pen', 'Editar venta')}
                 ${botonIcono(`App.eliminarVenta('${v.id}')`, 'fa-solid fa-trash', 'Anular venta', 'hover:text-rose-500')}
             </td>
         </tr>`;
-    }).join('') || filaVacia(9, consulta || filtro !== 'todas' ? 'Ninguna venta coincide con el filtro' : 'Sin ventas registradas. Usa "Nueva Venta" para empezar.');
+    }).join('') || filaVacia(8, consulta || filtro !== 'todas' ? 'Ninguna venta coincide con el filtro' : 'Sin ventas registradas. Usa "Nueva Venta" para empezar.');
     const totalFiltrado = filtrar().reduce((s, v) => s + Store.montoVenta(v), 0);
     document.getElementById('paginacion-ventas').innerHTML = barraPaginacion('ventas', pag, pag.total ? `Total ${fmt(totalFiltrado)}` : '');
 }

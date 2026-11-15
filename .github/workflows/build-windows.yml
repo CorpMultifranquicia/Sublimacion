@@ -16,11 +16,14 @@ on:
       - 'requirements.txt'
       - 'Borrar datos.bat'
       - 'LEEME.txt'
+      - 'docs/**'
       - '.github/workflows/build-windows.yml'
 
 jobs:
   windows:
     runs-on: windows-latest
+    permissions:
+      contents: write   # para publicar la versión (Release) cuando se sube a main
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +44,7 @@ jobs:
         run: |
           Copy-Item "Borrar datos.bat" dist/SubliApp/
           Copy-Item "LEEME.txt" dist/SubliApp/
+          Copy-Item "docs/Instructivo_SubliApp.pdf" dist/SubliApp/
 
       - name: Probar que arranca
         shell: pwsh
@@ -57,3 +61,24 @@ jobs:
           name: SubliApp-windows
           path: dist/SubliApp
           retention-days: 90
+
+      # En main: publica una versión descargable permanente (pestaña Releases).
+      - name: Empaquetar .zip
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: Compress-Archive -Path dist/SubliApp -DestinationPath SubliApp-windows.zip
+
+      - name: Publicar versión
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.${{ github.run_number }}
+          name: SubliApp v2.${{ github.run_number }}
+          make_latest: true
+          body: |
+            Descarga **SubliApp-windows.zip**, descomprímelo en `C:\SubliApp\` y abre `SubliApp.exe`.
+            Si actualizas desde una versión anterior, reemplaza todo **excepto** la carpeta `SubliApp_datos`.
+            El instructivo completo viene incluido (Instructivo_SubliApp.pdf) y también se adjunta aquí.
+          files: |
+            SubliApp-windows.zip
+            docs/Instructivo_SubliApp.pdf

@@ -10,9 +10,14 @@ ABRIR EL PROGRAMA
     (o entra a http://127.0.0.1:8765).
   - Consejo: clic derecho en SubliApp.exe > Enviar a > Escritorio (crear acceso directo).
 
+INSTRUCTIVO COMPLETO
+  Abre "Instructivo_SubliApp.pdf" (en esta carpeta) o la sección Ayuda del
+  programa: explica cada pantalla paso a paso, con imágenes.
+
 PRIMEROS PASOS
   1. Configuración: revisa los datos del negocio y sube el logo (salen en
      recibos y cotizaciones). Ajusta el margen objetivo y la moneda.
+     Carga la tasa del día (arriba a la derecha) si trabajas con bolívares.
   2. Inventario: carga los insumos (tinta, papel, tazas, franelas...) con su
      costo y stock inicial.
   3. Prod. y Precios: crea cada producto con su receta.

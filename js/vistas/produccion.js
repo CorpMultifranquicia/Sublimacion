@@ -62,7 +62,7 @@ function render(el) {
         } else {
             ventas.sort(ordenar);
         }
-        return `<div class="kanban-col min-w-[270px] flex-1 flex flex-col bg-slate-100/60 rounded-xl p-3 border border-slate-200/60 border-t-4 ${COLOR_COLUMNA[estado]}" data-estado="${estado}">
+        return `<div class="kanban-col min-w-[225px] flex-1 flex flex-col bg-slate-100/60 rounded-xl p-3 border border-slate-200/60 border-t-4 ${COLOR_COLUMNA[estado]}" data-estado="${estado}">
             <div class="flex justify-between items-center mb-3 px-1">
                 <h3 class="font-bold text-slate-700 text-sm">${idx + 1}. ${estado}</h3>
                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${ESTADO_BADGE[estado]}">${ventas.length}</span>

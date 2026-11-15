@@ -60,7 +60,7 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
     def inicio():
         return send_from_directory(carpeta_web, 'index.html')
 
-    @app.get('/<any(css, js, vendor):carpeta>/<path:archivo>')
+    @app.get('/<any(css, js, vendor, docs):carpeta>/<path:archivo>')
     def estaticos(carpeta, archivo):
         return send_from_directory(carpeta_web / carpeta, archivo)
 

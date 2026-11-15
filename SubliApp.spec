@@ -10,6 +10,9 @@ a = Analysis(
         ('css', 'css'),
         ('js', 'js'),
         ('vendor', 'vendor'),
+        ('docs/instructivo/index.html', 'docs/instructivo'),
+        ('docs/instructivo/img', 'docs/instructivo/img'),
+        ('docs/Instructivo_SubliApp.pdf', 'docs'),
     ],
     hiddenimports=['waitress', 'openpyxl'],
 )

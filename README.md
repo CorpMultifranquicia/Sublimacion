@@ -16,7 +16,9 @@ Sistema de gestión para negocios de sublimación: ventas, producción (kanban),
 - **Gastos**: gastos generales (alquiler, luz, internet, sueldos...) por mes y categoría.
 - **Clientes**: contacto, email, fechas especiales, notas, total comprado, saldo e historial.
 - **Reportes**: por período (mes, mes anterior, 3 meses, año o rango libre): ventas, costo de lo vendido, utilidad bruta, gastos, **utilidad neta**, cobrado/por cobrar, rentabilidad por producto y por cliente. **Exportación a Excel** con hojas en formato Tabla (tVentas, tCobros, tKardex...) listas para tablas dinámicas o Power Query.
-- **Configuración**: datos del negocio y logo (salen en los PDF), moneda, margen objetivo, validez y condiciones de las cotizaciones, vista previa de documentos, descarga de respaldo.
+- **Bolívares**: los precios se guardan en $ y se convierten con la **tasa del día**, que se carga a mano (con historial). Cada venta y cotización guarda su tasa; los abonos se pueden registrar en Bs; los recibos y cotizaciones en PDF se generan en $, en Bs o en ambas monedas.
+- **Configuración**: datos del negocio y logo (salen en los PDF), moneda, margen objetivo, bolívares, validez y condiciones de las cotizaciones, vista previa de documentos, descarga de respaldo.
+- **Ayuda**: el instructivo completo dentro del programa, también descargable en PDF.
 
 Los recibos y cotizaciones son **documentos no fiscales**.
 
@@ -24,13 +26,13 @@ No hay login: el programa solo escucha en `127.0.0.1` (nadie fuera de esa PC pue
 
 ## Instalar en la PC del negocio
 
-1. En GitHub, pestaña **Actions → "Compilar SubliApp para Windows"**, abre la última ejecución exitosa y descarga el artifact **SubliApp-windows** (un .zip).
-   - Para generar una nueva: botón **Run workflow**. También se ejecuta solo cada vez que se hace push de cambios al código.
+1. En GitHub, sección **Releases** del repositorio, descarga `SubliApp-windows.zip` de la última versión. Cada cambio subido a `main` publica una versión nueva automáticamente.
+   - Las ramas de trabajo también compilan: en **Actions → "Compilar SubliApp para Windows"** queda el artifact **SubliApp-windows** (dura 90 días).
    - Alternativa sin GitHub: en una PC Windows con Python instalado, doble clic en `build_windows.bat` → queda en `dist\SubliApp\`.
 2. Descomprime la carpeta en un lugar fijo, p. ej. `C:\SubliApp\` (no en "Descargas" ni en "Archivos de programa").
 3. Crea un acceso directo de `SubliApp.exe` en el escritorio.
 
-El uso diario, respaldos y restauración están explicados para el usuario final en [`LEEME.txt`](LEEME.txt) (viene dentro del .zip).
+El uso de cada sección está explicado paso a paso, con capturas, en el **instructivo** ([`docs/Instructivo_SubliApp.pdf`](docs/Instructivo_SubliApp.pdf)), que también se abre desde la sección **Ayuda** del programa. [`LEEME.txt`](LEEME.txt) resume lo esencial (viene dentro del .zip).
 
 ### Actualizar a una versión nueva
 
@@ -75,7 +77,9 @@ js/
   ui.js                  Modal, avisos (toasts) y combo con buscador.
   pdf.js                 Recibo y cotización (jsPDF).
   vistas/<sección>.js    Una pantalla por archivo (ventas, inventario, reportes...).
+  vistas/tasa.js         Tasa del día, historial y elección de moneda de los PDF.
 vendor/                  Tailwind, jsPDF, FontAwesome e Inter incluidos (funciona sin internet).
+docs/                    Instructivo (HTML + capturas + PDF) y su generador.
 SubliApp.spec            Receta de PyInstaller (genera dist/SubliApp/SubliApp.exe).
 build_windows.bat        Compila el .exe en una PC Windows.
 .github/workflows/       Compila el .exe en GitHub Actions.
@@ -94,6 +98,10 @@ respaldos/               Copia diaria (últimas 30), "antes_de_borrar_..." y "an
 1. `backend/esquema.py`: agrega la columna en `ESQUEMA` (bases nuevas) y una función `migrar_a_N` con el `ALTER TABLE` (bases existentes); súmala a `MIGRACIONES` y sube `VERSION`. Al abrir el programa se migra solo, guardando antes una copia en `respaldos/`.
 2. `backend/base_datos.py`: inclúyelo en la validación/guardado de esa entidad.
 3. `js/vistas/<sección>.js`: agrégalo al formulario.
+
+### Actualizar el instructivo
+
+El texto está en `docs/instructivo/index.html`. Las capturas y el PDF se regeneran con `docs/instructivo/generar_capturas.js` (instrucciones al inicio del archivo): carga datos de ejemplo en una carpeta vacía, toma las capturas con marcas numeradas y genera `docs/Instructivo_SubliApp.pdf`.
 
 ### Cambiar los colores
 

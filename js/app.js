@@ -25,8 +25,9 @@ import { vista as gastos } from './vistas/gastos.js';
 import { vista as clientes } from './vistas/clientes.js';
 import { vista as reportes } from './vistas/reportes.js';
 import { vista as configuracion } from './vistas/configuracion.js';
+import { vista as ayuda } from './vistas/ayuda.js';
 
-const VISTAS = [inicio, ventas, cotizaciones, produccion, productos, inventario, compras, gastos, clientes, reportes, configuracion];
+const VISTAS = [inicio, ventas, cotizaciones, produccion, productos, inventario, compras, gastos, clientes, reportes, configuracion, ayuda];
 const GRUPOS = ['Principal', 'Catálogo', 'Administración', 'Sistema'];
 const montadas = new Set();
 let actual = 'inicio';

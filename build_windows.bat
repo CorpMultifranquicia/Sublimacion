@@ -6,6 +6,7 @@ python -m pip install -r requirements.txt pyinstaller || goto :error
 pyinstaller --noconfirm SubliApp.spec || goto :error
 copy /y "Borrar datos.bat" dist\SubliApp\ >nul
 copy /y "LEEME.txt" dist\SubliApp\ >nul
+copy /y "docs\Instructivo_SubliApp.pdf" dist\SubliApp\ >nul
 echo.
 echo Listo: dist\SubliApp\SubliApp.exe
 pause
