@@ -50,7 +50,8 @@
     .e-azul { background: #dbeafe; color: #1d4ed8; } .e-ambar { background: #fef3c7; color: #b45309; } .e-violeta { background: #ede9fe; color: #6d28d9; }
     .e-verde { background: #d1fae5; color: #047857; } .e-rojo { background: #ffe4e6; color: #be123c; } .e-gris { background: #f1f5f9; color: #475569; }
     .portada { min-height: 92vh; display: flex; flex-direction: column; justify-content: center; text-align: center; break-after: page; }
-    .portada .gema { width: 96px; margin: 0 auto 18px; }
+    .portada .logo-portada { width: 420px; max-width: 80%; margin: 0 auto 36px; display: block; }
+    .logo-final { width: 160px; display: block; margin: 48px auto 8px; }
     .portada h1 { font-size: 46px; margin: 0; background: linear-gradient(90deg, var(--marino), var(--azul), var(--violeta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .portada .sub { font-size: 20px; color: var(--gris); margin: 6px 0 36px; }
     .portada .negocio { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--violeta); font-weight: 700; }
@@ -82,8 +83,7 @@
 
 <!-- ============ PORTADA ============ -->
 <section class="portada">
-    <svg class="gema" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 54 24 32 60 10 24Z" fill="#2347c8"/><path d="M32 4 54 24H10Z" fill="#8b2fc9"/><path d="M32 4 41 24 32 60 23 24Z" fill="#fff" opacity=".18"/></svg>
-    <p class="negocio">Zafiro Lab · Sublimación y personalización</p>
+    <img class="logo-portada" src="img/logo_zafiro.png" alt="Zafiro Lab · Sublimación y personalización">
     <h1>Instructivo de SubliApp</h1>
     <p class="sub">Guía paso a paso para manejar ventas, producción, inventario,<br>costos y cobros del negocio</p>
     <p style="color:var(--gris);font-size:14px">Versión local para Windows · No necesita internet</p>
@@ -712,7 +712,8 @@
     <dt>Tasa del día</dt><dd>Cuántos bolívares vale un dólar; la cargas tú cada día.</dd>
     <dt>Utilidad bruta / neta</dt><dd>Bruta: ventas − costo de materiales. Neta: bruta − gastos del negocio.</dd>
 </dl>
-<p style="margin-top:40px;text-align:center;color:var(--gris);font-size:13px">SubliApp · Zafiro Lab — Sublimación y personalización</p>
+<img class="logo-final" src="img/logo_zafiro.png" alt="Zafiro Lab">
+<p style="text-align:center;color:var(--gris);font-size:13px">SubliApp · Sistema de gestión de Zafiro Lab</p>
 
 </main>
 </body>

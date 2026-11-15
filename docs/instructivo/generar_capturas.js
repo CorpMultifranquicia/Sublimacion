@@ -136,6 +136,7 @@ const quitarMarcas = (page) => page.evaluate(() => document.querySelectorAll('.m
 
 async function captura(page, nombre, marcas = [], opciones = {}) {
     await page.waitForTimeout(350);
+    await page.evaluate(() => document.getElementById('toasts')?.remove()); // sin avisos en la foto
     if (marcas.length) await anotar(page, marcas);
     await page.screenshot({ path: path.join(IMG, `${nombre}.png`), ...opciones });
     await quitarMarcas(page);
@@ -172,6 +173,12 @@ async function pdfAImagen(page, accion, nombre) {
     await page.waitForSelector('#app-shell:not(.hidden)');
     const estado = await api('GET', '/api/estado');
     const venta = (folio) => estado.ventas.find(v => v.folio === folio);
+
+    // Logo del negocio: se sube con el mismo botón de Configuración que usa el usuario.
+    await ir(page, 'configuracion');
+    await page.setInputFiles('#cfg-logo', path.join(IMG, 'logo_zafiro.png'));
+    await page.waitForSelector('#marca img');
+    await ir(page, 'inicio');
 
     // 1. Pantalla general
     await captura(page, '01_pantalla_general', [

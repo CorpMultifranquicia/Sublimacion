@@ -45,7 +45,7 @@ function renderNav() {
 
     const cfg = Store.state.config;
     document.getElementById('marca').innerHTML = cfg.logo
-        ? `<img src="${esc(cfg.logo)}" alt="${esc(cfg.negocio_nombre)}" class="max-h-12 max-w-full object-contain">`
+        ? `<img src="${esc(cfg.logo)}" alt="${esc(cfg.negocio_nombre)}" class="max-h-[68px] max-w-full object-contain">`
         : `<i class="fa-solid fa-gem text-2xl text-indigo-600 mr-2"></i><div class="min-w-0 leading-tight">
                <p class="text-lg font-black tracking-tight bg-gradient-to-r from-indigo-800 via-indigo-500 to-violet-600 bg-clip-text text-transparent truncate">${esc(cfg.negocio_nombre || 'SubliApp')}</p>
                ${cfg.negocio_eslogan ? `<p class="text-[9px] uppercase tracking-wide text-slate-400 truncate">${esc(cfg.negocio_eslogan)}</p>` : ''}</div>`;
