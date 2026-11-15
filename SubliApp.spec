@@ -11,7 +11,7 @@ a = Analysis(
         ('js', 'js'),
         ('vendor', 'vendor'),
     ],
-    hiddenimports=['waitress'],
+    hiddenimports=['waitress', 'openpyxl'],
 )
 pyz = PYZ(a.pure)
 exe = EXE(

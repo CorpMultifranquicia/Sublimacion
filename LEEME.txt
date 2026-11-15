@@ -10,6 +10,14 @@ ABRIR EL PROGRAMA
     (o entra a http://127.0.0.1:8765).
   - Consejo: clic derecho en SubliApp.exe > Enviar a > Escritorio (crear acceso directo).
 
+PRIMEROS PASOS
+  1. Configuración: revisa los datos del negocio y sube el logo (salen en
+     recibos y cotizaciones). Ajusta el margen objetivo y la moneda.
+  2. Inventario: carga los insumos (tinta, papel, tazas, franelas...) con su
+     costo y stock inicial.
+  3. Prod. y Precios: crea cada producto con su receta.
+  4. Listo: ya puedes registrar ventas, cotizaciones, compras y gastos.
+
 TUS DATOS
   Todo se guarda en la carpeta SubliApp_datos (junto a SubliApp.exe):
     subliapp.db   -> la base de datos (productos, ventas, clientes, etc.)
@@ -17,13 +25,16 @@ TUS DATOS
     respaldos\    -> una copia automática por día (se guardan las últimas 30)
 
 RESPALDO (MUY IMPORTANTE)
-  Copia la carpeta SubliApp_datos completa a un pendrive o a Google Drive
-  al menos una vez por semana. Si la PC se daña, eso es lo único que necesitas.
+  En Configuración > "Descargar respaldo" se baja una copia de la base de datos.
+  Guárdala en un pendrive o en Google Drive al menos una vez por semana (la
+  pantalla de Inicio te avisa si pasan más de 7 días). Para un respaldo total,
+  incluidas las imágenes de diseños, copia la carpeta SubliApp_datos completa.
 
 RESTAURAR UN RESPALDO
   1. Cierra SubliApp (cierra la ventana negra).
-  2. Copia el archivo que quieras de SubliApp_datos\respaldos\ a SubliApp_datos\
-     y cámbiale el nombre a subliapp.db (reemplazando el actual).
+  2. Copia el archivo de respaldo (de SubliApp_datos\respaldos\ o el que
+     descargaste) a SubliApp_datos\ y cámbiale el nombre a subliapp.db
+     (reemplazando el actual).
   3. Abre SubliApp de nuevo.
 
 PASAR A OTRA PC
@@ -36,3 +47,7 @@ EMPEZAR DE CERO
 SI WINDOWS MUESTRA "WINDOWS PROTEGIÓ SU PC"
   Es normal en programas sin firma digital. Clic en "Más información" >
   "Ejecutar de todas formas". Solo pasa la primera vez.
+
+DOCUMENTOS
+  Los recibos y cotizaciones son documentos NO fiscales. Si un cliente necesita
+  factura fiscal, debe emitirse con una imprenta o máquina fiscal autorizada.

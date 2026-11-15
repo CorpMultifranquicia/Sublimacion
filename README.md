@@ -6,15 +6,19 @@ Sistema de gestión para negocios de sublimación: ventas, producción (kanban),
 
 ## Funcionalidades
 
-- **Dashboard**: KPIs de ingresos/gastos del mes, ventas recientes, alertas de stock.
-- **Ventas**: pedidos con múltiples productos. Al registrar una venta se descuenta del stock cada insumo de la receta (cantidad × (1 + % merma) × unidades). Recibo en PDF y estado del pedido por WhatsApp.
-- **Cotizaciones**: PDF ad-hoc (cliente + productos) sin registrar una venta.
-- **Producción**: kanban (Por Diseñar → Imprimiendo → Listo/Entregado) con drag & drop. Adjuntos por pedido: imágenes (guardadas en la PC) o enlaces a Drive.
-- **Productos y Precios**: CRUD con receta (insumos + cantidad + % de merma), costo de producción, margen % y ganancia neta.
-- **Inventario**: CRUD de insumos, alertas por stock mínimo/crítico, filtro por categoría. Costo y stock editables a mano.
-- **Compras**: facturas de proveedor; suman stock y recalculan el costo unitario promedio ponderado del insumo.
-- **Clientes (CRM)**: directorio, WhatsApp directo, fechas especiales, historial de compras y ranking.
-- **Reportes**: ingresos vs gastos (6 meses), productos más vendidos, top clientes.
+- **Inicio**: ventas y utilidad del mes comparadas con el mes anterior, cuentas por cobrar, entregas atrasadas y próximas, fechas especiales de clientes (próximos 7 días, con felicitación por WhatsApp), stock bajo y aviso si hace más de 7 días que no se descarga un respaldo.
+- **Ventas**: pedidos con buscador de clientes y productos (o venta de "Mostrador"), fecha de entrega, notas y **abonos** (anticipo + pagos parciales, saldo pendiente). Al vender se descuenta el stock según la receta y se **guarda el costo de producción del momento**. Editar o anular una venta corrige el stock automáticamente. Recibo en PDF y mensajes de WhatsApp según el estado.
+- **Cotizaciones**: se guardan con folio (COT-0001) y vencimiento; admiten líneas fuera del catálogo; PDF, resumen por WhatsApp y **conversión a venta con un clic**.
+- **Producción**: kanban Por Diseñar → Imprimiendo → Listo → Entregado, ordenado por fecha de entrega, con pedidos atrasados resaltados, saldo pendiente visible, botón para avanzar de etapa y diseños adjuntos.
+- **Productos y Precios**: receta (insumos + cantidad + % merma), costo, margen y **precio sugerido** según el margen objetivo de Configuración.
+- **Inventario**: stock, alertas, valor del inventario y **kárdex** por insumo (cada venta, compra, merma y ajuste queda registrado). Mermas y ajustes se registran como movimiento propio.
+- **Compras**: suman stock y recalculan el costo promedio ponderado; se pueden editar o anular.
+- **Gastos**: gastos generales (alquiler, luz, internet, sueldos...) por mes y categoría.
+- **Clientes**: contacto, email, fechas especiales, notas, total comprado, saldo e historial.
+- **Reportes**: por período (mes, mes anterior, 3 meses, año o rango libre): ventas, costo de lo vendido, utilidad bruta, gastos, **utilidad neta**, cobrado/por cobrar, rentabilidad por producto y por cliente. **Exportación a Excel** con hojas en formato Tabla (tVentas, tCobros, tKardex...) listas para tablas dinámicas o Power Query.
+- **Configuración**: datos del negocio y logo (salen en los PDF), moneda, margen objetivo, validez y condiciones de las cotizaciones, vista previa de documentos, descarga de respaldo.
+
+Los recibos y cotizaciones son **documentos no fiscales**.
 
 No hay login: el programa solo escucha en `127.0.0.1` (nadie fuera de esa PC puede entrar). Quien usa la PC tiene acceso total.
 
@@ -55,36 +59,45 @@ Opciones del lanzador: `--sin-navegador` (no abre el navegador) y `--borrar-dato
 ## Arquitectura
 
 ```
-SubliApp.py           Lanzador: respaldo diario, levanta el servidor y abre el navegador.
+SubliApp.py              Lanzador: respaldo diario, levanta el servidor y abre el navegador.
 backend/
-  base_datos.py       SQLite: esquema, lectura completa y todas las escrituras.
-                      registrar_venta / registrar_compra corren en una transacción.
-  api.py              Flask: sirve la interfaz y la API JSON en /api/...
-index.html, css/, js/ Interfaz (HTML + Tailwind + JS vanilla con módulos ES).
-  js/store.js         Capa de datos del frontend: llama a /api/... y mantiene una
-                      caché en memoria; costos/márgenes se calculan aquí en JS.
-  js/app.js           Vistas, modales y eventos.
-  js/pdf.js           Recibos y cotizaciones (edita NEGOCIO_NOMBRE / NEGOCIO_CONTACTO).
-  js/imageUtils.js    Comprime imágenes antes de guardarlas (máx. 1600px, JPEG 80%).
-vendor/               Tailwind, jsPDF, FontAwesome y fuente Inter incluidos
-                      (por eso funciona sin internet).
-SubliApp.spec         Receta de PyInstaller (genera dist/SubliApp/SubliApp.exe).
-build_windows.bat     Compila el .exe en una PC Windows.
-.github/workflows/    Compila el .exe en GitHub Actions.
+  esquema.py             Estructura de la base y migraciones automáticas (PRAGMA user_version).
+  base_datos.py          Todas las lecturas/escrituras y reglas de negocio (stock, kárdex,
+                         abonos, costo promedio). Cada operación corre en una transacción.
+  api.py                 Flask: sirve la interfaz y la API JSON en /api/...
+  exportar.py            Genera el Excel de Reportes (openpyxl).
+index.html               Estructura de la pantalla y paleta de colores (tailwind.config).
+js/
+  app.js                 Arranque, menú y navegación.
+  store.js               Llama a la API, guarda el estado en memoria y hace los cálculos
+                         (costos, márgenes, saldos, resúmenes por período).
+  util.js                Formatos de dinero/fechas (fechas SIEMPRE locales), escape de HTML.
+  ui.js                  Modal, avisos (toasts) y combo con buscador.
+  pdf.js                 Recibo y cotización (jsPDF).
+  vistas/<sección>.js    Una pantalla por archivo (ventas, inventario, reportes...).
+vendor/                  Tailwind, jsPDF, FontAwesome e Inter incluidos (funciona sin internet).
+SubliApp.spec            Receta de PyInstaller (genera dist/SubliApp/SubliApp.exe).
+build_windows.bat        Compila el .exe en una PC Windows.
+.github/workflows/       Compila el .exe en GitHub Actions.
 ```
 
 Carpeta de datos (`SubliApp_datos/` junto al .exe):
 
 ```
-subliapp.db           Base de datos
-adjuntos/<venta>/     Imágenes de diseño de cada pedido
-respaldos/            Copia diaria (últimas 30) + copias "antes_de_borrar_..."
+subliapp.db              Base de datos
+adjuntos/<venta>/        Imágenes de diseño de cada pedido
+respaldos/               Copia diaria (últimas 30), "antes_de_borrar_..." y "antes_de_migrar_..."
 ```
 
-### Agregar un campo nuevo (ejemplo)
+### Cambiar la estructura de la base (ejemplo: un campo nuevo)
 
-1. `backend/base_datos.py`: agrégalo al `CREATE TABLE` y a la tupla `CAMPOS_...` de esa tabla. Para una base ya existente, agrega también un `ALTER TABLE ... ADD COLUMN` en `BaseDatos.__init__` (protegido con `try/except sqlite3.OperationalError` por si ya existe).
-2. `js/app.js`: agrégalo al formulario del modal correspondiente.
+1. `backend/esquema.py`: agrega la columna en `ESQUEMA` (bases nuevas) y una función `migrar_a_N` con el `ALTER TABLE` (bases existentes); súmala a `MIGRACIONES` y sube `VERSION`. Al abrir el programa se migra solo, guardando antes una copia en `respaldos/`.
+2. `backend/base_datos.py`: inclúyelo en la validación/guardado de esa entidad.
+3. `js/vistas/<sección>.js`: agrégalo al formulario.
+
+### Cambiar los colores
+
+En `index.html`, el bloque `tailwind.config` redefine la paleta principal (`indigo`) con los tonos de la marca. Los PDF usan las constantes de color al inicio de `js/pdf.js`.
 
 ### Futuro: si el negocio crece
 

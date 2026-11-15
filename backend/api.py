@@ -8,11 +8,17 @@ Sirve dos cosas:
 Solo escucha en 127.0.0.1: nadie fuera de esta PC puede conectarse.
 """
 
+import os
+import subprocess
+import sys
+import tempfile
+from datetime import date
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from .base_datos import BaseDatos, ErrorDeDatos
+from .exportar import libro_excel
 
 MAX_IMAGEN_BYTES = 8 * 1024 * 1024
 
@@ -23,7 +29,6 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
 
     app = Flask(__name__, static_folder=None)
     app.config['MAX_CONTENT_LENGTH'] = MAX_IMAGEN_BYTES + 1024 * 1024
-    app.config['JSON_AS_ASCII'] = False
     app.json.ensure_ascii = False
 
     def ok(**extra):
@@ -43,6 +48,12 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
         app.logger.exception(e)
         return jsonify({'error': f'Error interno: {e}'}), 500
 
+    @app.after_request
+    def sin_cache(resp):
+        # La interfaz se actualiza con cada versión nueva: que el navegador no use copias viejas.
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
+
     # ---------- Interfaz ----------
 
     @app.get('/')
@@ -57,7 +68,7 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
     def adjuntos(archivo):
         return send_from_directory(db.carpeta_adjuntos, archivo)
 
-    # ---------- API ----------
+    # ---------- Lectura ----------
 
     @app.get('/api/ping')
     def ping():
@@ -67,68 +78,56 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
     def estado():
         return jsonify(db.estado())
 
-    # Insumos
-    @app.post('/api/insumos')
-    def crear_insumo():
-        return ok(id=db.crear_insumo(cuerpo()))
+    # ---------- CRUD simple: (ruta, crear, actualizar, borrar) ----------
 
-    @app.put('/api/insumos/<id_>')
-    def actualizar_insumo(id_):
-        db.actualizar_insumo(id_, cuerpo())
+    def registrar_crud(ruta, crear, actualizar, borrar):
+        app.add_url_rule(f'/api/{ruta}', f'crear_{ruta}', lambda: ok(id=crear(cuerpo())), methods=['POST'])
+
+        def _actualizar(id_):
+            actualizar(id_, cuerpo())
+            return ok()
+
+        def _borrar(id_):
+            borrar(id_)
+            return ok()
+        app.add_url_rule(f'/api/{ruta}/<id_>', f'actualizar_{ruta}', _actualizar, methods=['PUT'])
+        app.add_url_rule(f'/api/{ruta}/<id_>', f'borrar_{ruta}', _borrar, methods=['DELETE'])
+
+    registrar_crud('insumos', db.crear_insumo, db.actualizar_insumo, db.borrar_insumo)
+    registrar_crud('productos', db.crear_producto, db.actualizar_producto, db.borrar_producto)
+    registrar_crud('clientes', db.crear_cliente, db.actualizar_cliente, db.borrar_cliente)
+    registrar_crud('ventas', db.registrar_venta, db.actualizar_venta, db.borrar_venta)
+    registrar_crud('compras', db.registrar_compra, db.actualizar_compra, db.borrar_compra)
+    registrar_crud('cotizaciones', db.crear_cotizacion, db.actualizar_cotizacion, db.borrar_cotizacion)
+    registrar_crud('gastos', db.crear_gasto, db.actualizar_gasto, db.borrar_gasto)
+
+    # ---------- Inventario ----------
+
+    @app.get('/api/insumos/<id_>/movimientos')
+    def movimientos(id_):
+        return jsonify(db.movimientos(id_))
+
+    @app.post('/api/insumos/<id_>/ajuste')
+    def ajuste(id_):
+        db.ajustar_stock(id_, cuerpo())
         return ok()
 
-    @app.delete('/api/insumos/<id_>')
-    def borrar_insumo(id_):
-        db.borrar_insumo(id_)
-        return ok()
-
-    # Productos
-    @app.post('/api/productos')
-    def crear_producto():
-        return ok(id=db.crear_producto(cuerpo()))
-
-    @app.put('/api/productos/<id_>')
-    def actualizar_producto(id_):
-        db.actualizar_producto(id_, cuerpo())
-        return ok()
-
-    @app.delete('/api/productos/<id_>')
-    def borrar_producto(id_):
-        db.borrar_producto(id_)
-        return ok()
-
-    # Clientes
-    @app.post('/api/clientes')
-    def crear_cliente():
-        return ok(id=db.crear_cliente(cuerpo()))
-
-    @app.put('/api/clientes/<id_>')
-    def actualizar_cliente(id_):
-        db.actualizar_cliente(id_, cuerpo())
-        return ok()
-
-    @app.delete('/api/clientes/<id_>')
-    def borrar_cliente(id_):
-        db.borrar_cliente(id_)
-        return ok()
-
-    # Ventas
-    @app.post('/api/ventas')
-    def crear_venta():
-        d = cuerpo()
-        return ok(id=db.registrar_venta(d.get('cliente_id'), d.get('fecha'), d.get('estado'), d.get('detalle', [])))
+    # ---------- Ventas: estado, pagos y adjuntos ----------
 
     @app.put('/api/ventas/<id_>/estado')
     def actualizar_estado_venta(id_):
         db.actualizar_estado_venta(id_, cuerpo().get('estado'))
         return ok()
 
-    @app.delete('/api/ventas/<id_>')
-    def borrar_venta(id_):
-        db.borrar_venta(id_)
+    @app.post('/api/ventas/<venta_id>/pagos')
+    def crear_pago(venta_id):
+        return ok(id=db.registrar_pago(venta_id, cuerpo()))
+
+    @app.delete('/api/pagos/<id_>')
+    def borrar_pago(id_):
+        db.borrar_pago(id_)
         return ok()
 
-    # Adjuntos
     @app.post('/api/ventas/<venta_id>/adjuntos/enlace')
     def crear_adjunto_enlace(venta_id):
         d = cuerpo()
@@ -149,11 +148,45 @@ def crear_app(carpeta_web: Path, carpeta_datos: Path) -> Flask:
         db.borrar_adjunto(id_)
         return ok()
 
-    # Compras
-    @app.post('/api/compras')
-    def crear_compra():
-        d = cuerpo()
-        return ok(id=db.registrar_compra(d.get('proveedor'), d.get('fecha'), d.get('items', [])))
+    # ---------- Configuración, respaldo y exportación ----------
+
+    @app.put('/api/config')
+    def guardar_config():
+        db.guardar_config(cuerpo())
+        return ok()
+
+    @app.get('/api/respaldo')
+    def descargar_respaldo():
+        """Descarga una copia completa de la base de datos."""
+        temporal = Path(tempfile.mkdtemp()) / 'subliapp.db'
+        db.copiar_base(temporal)
+        db.guardar_config({'ultimo_respaldo': date.today().isoformat()})
+        return send_file(temporal, as_attachment=True,
+                         download_name=f'SubliApp_respaldo_{date.today().isoformat()}.db')
+
+    @app.post('/api/abrir-carpeta')
+    def abrir_carpeta():
+        """Abre la carpeta de datos en el explorador de archivos (solo en la PC local)."""
+        carpeta = str(db.carpeta)
+        try:
+            if sys.platform.startswith('win'):
+                os.startfile(carpeta)  # noqa: S606 — carpeta propia, no viene del usuario
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', carpeta])
+            else:
+                subprocess.Popen(['xdg-open', carpeta])
+        except OSError:
+            raise ErrorDeDatos(f'No se pudo abrir el explorador. La carpeta es: {carpeta}')
+        return ok(carpeta=carpeta)
+
+    @app.get('/api/exportar')
+    def exportar():
+        desde = request.args.get('desde') or '0000-01-01'
+        hasta = request.args.get('hasta') or '9999-12-31'
+        archivo = libro_excel(db.estado(), desde, hasta, db.movimientos_todos())
+        nombre = f'SubliApp_{desde}_a_{hasta}.xlsx' if request.args.get('desde') else 'SubliApp_todo.xlsx'
+        return send_file(archivo, as_attachment=True, download_name=nombre,
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     app.db = db
     return app

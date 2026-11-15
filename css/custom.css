@@ -7,3 +7,8 @@ body { font-family: 'Inter', sans-serif; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .kanban-card[draggable="true"] { cursor: grab; }
 .kanban-col.drag-over { background-color: #eef2ff; }
+.toast { animation: toastIn 0.2s ease-out; }
+.toast-salida { opacity: 0; transform: translateY(6px); transition: all 0.2s; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
