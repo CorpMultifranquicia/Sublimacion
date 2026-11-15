@@ -1,0 +1,38 @@
+SUBLIAPP - Guía rápida
+======================
+
+ABRIR EL PROGRAMA
+  Doble clic en SubliApp.exe. Se abre una ventana negra y el navegador
+  con el sistema. No necesita internet.
+  - La ventana negra ES el programa: mientras esté abierta, SubliApp funciona.
+    Puedes minimizarla, pero si la cierras el sistema se apaga.
+  - Si cierras el navegador por error, vuelve a dar doble clic en SubliApp.exe
+    (o entra a http://127.0.0.1:8765).
+  - Consejo: clic derecho en SubliApp.exe > Enviar a > Escritorio (crear acceso directo).
+
+TUS DATOS
+  Todo se guarda en la carpeta SubliApp_datos (junto a SubliApp.exe):
+    subliapp.db   -> la base de datos (productos, ventas, clientes, etc.)
+    adjuntos\     -> imágenes de diseño subidas en Producción
+    respaldos\    -> una copia automática por día (se guardan las últimas 30)
+
+RESPALDO (MUY IMPORTANTE)
+  Copia la carpeta SubliApp_datos completa a un pendrive o a Google Drive
+  al menos una vez por semana. Si la PC se daña, eso es lo único que necesitas.
+
+RESTAURAR UN RESPALDO
+  1. Cierra SubliApp (cierra la ventana negra).
+  2. Copia el archivo que quieras de SubliApp_datos\respaldos\ a SubliApp_datos\
+     y cámbiale el nombre a subliapp.db (reemplazando el actual).
+  3. Abre SubliApp de nuevo.
+
+PASAR A OTRA PC
+  Copia la carpeta completa de SubliApp (con SubliApp_datos adentro) a la otra PC.
+
+EMPEZAR DE CERO
+  Doble clic en "Borrar datos.bat" y escribe BORRAR. Antes de borrar se guarda
+  una copia en SubliApp_datos\respaldos\ (archivo "antes_de_borrar_...").
+
+SI WINDOWS MUESTRA "WINDOWS PROTEGIÓ SU PC"
+  Es normal en programas sin firma digital. Clic en "Más información" >
+  "Ejecutar de todas formas". Solo pasa la primera vez.

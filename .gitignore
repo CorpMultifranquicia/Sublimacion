@@ -1,3 +1,10 @@
-js/config.js
-node_modules/
-.vercel
+# Datos locales (base de datos, imágenes y respaldos): nunca se commitean
+datos/
+SubliApp_datos/
+
+# Python / empaquetado
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/

@@ -1,0 +1,59 @@
+# Compila SubliApp para Windows y deja el .zip listo para descargar
+# en la pestaña "Actions" de GitHub (sección "Artifacts" de cada ejecución).
+name: Compilar SubliApp para Windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'SubliApp.py'
+      - 'SubliApp.spec'
+      - 'backend/**'
+      - 'index.html'
+      - 'css/**'
+      - 'js/**'
+      - 'vendor/**'
+      - 'requirements.txt'
+      - 'Borrar datos.bat'
+      - 'LEEME.txt'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Compilar ejecutable
+        run: pyinstaller --noconfirm SubliApp.spec
+
+      - name: Agregar archivos de ayuda
+        shell: pwsh
+        run: |
+          Copy-Item "Borrar datos.bat" dist/SubliApp/
+          Copy-Item "LEEME.txt" dist/SubliApp/
+
+      - name: Probar que arranca
+        shell: pwsh
+        run: |
+          $p = Start-Process dist/SubliApp/SubliApp.exe -ArgumentList '--sin-navegador' -PassThru
+          Start-Sleep -Seconds 8
+          $r = Invoke-RestMethod http://127.0.0.1:8765/api/ping
+          Stop-Process -Id $p.Id -Force
+          if ($r.app -ne 'SubliApp') { throw 'El ejecutable no respondió' }
+          Remove-Item -Recurse -Force dist/SubliApp/SubliApp_datos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SubliApp-windows
+          path: dist/SubliApp
+          retention-days: 90

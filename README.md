@@ -2,76 +2,90 @@
 
 Sistema de gestión para negocios de sublimación: ventas, producción (kanban), catálogo con recetas y márgenes, inventario, compras y CRM.
 
-## Estado actual (Fases 1, 2 y 3 del roadmap)
+**Versión local**: un programa de Windows que corre en una sola PC, sin internet ni servicios externos. La base de datos es un archivo SQLite junto al ejecutable.
 
-App estática (HTML + Tailwind CDN + FontAwesome + JS vanilla con módulos ES), sin build de por medio salvo la inyección de credenciales. Backend: **Supabase** (Postgres + Auth + RLS + Storage). Deploy: **Vercel**.
+## Funcionalidades
 
 - **Dashboard**: KPIs de ingresos/gastos del mes, ventas recientes, alertas de stock.
-- **Ventas**: registro de pedidos con múltiples productos, descuento automático de stock de insumos según receta (vía función SQL transaccional `registrar_venta`). Descarga de recibo en PDF y envío del estado del pedido por WhatsApp.
-- **Cotizaciones**: generador de PDF ad-hoc (cliente + productos) sin necesidad de registrar una venta.
-- **Producción**: tablero kanban (Por Diseñar → Imprimiendo → Listo/Entregado) con drag & drop, sincronizado con el estado de la venta. Adjuntos por pedido (imágenes subidas a Supabase Storage o enlaces a Drive).
-- **Productos y Precios**: CRUD de productos con constructor de receta (insumos + cantidad + % de merma), cálculo automático de costo de producción, margen % y ganancia neta.
-- **Inventario**: CRUD de insumos, alertas por stock mínimo/crítico, filtro por categoría.
-- **Compras**: registro de facturas de proveedor; actualiza stock y recalcula el costo unitario promedio ponderado del insumo (vía función SQL transaccional `registrar_compra`).
-- **Clientes (CRM)**: directorio con WhatsApp directo, fechas especiales (con felicitación preformateada por WhatsApp), detalle de cliente con historial completo de compras, y ranking de mejores clientes.
-- **Reportes**: gráfico de ingresos vs gastos (6 meses), productos más vendidos del mes, top clientes.
-- **Login**: los administradores acceden con email/contraseña vía Supabase Auth. Todas las tablas tienen RLS: cualquier usuario autenticado tiene acceso total (crear, editar, eliminar, ver reportes) — no hay roles diferenciados, por diseño. Da cuenta a cada persona que use el sistema sabiendo que su acceso es total.
-- **Precios de insumos y productos son editables directo**, sin pasar por Compras ni por una receta: en Inventario, el ✏️ de cualquier insumo permite cambiar su costo unitario y stock a mano; en Prod. y Precios, el ✏️ de cualquier producto permite cambiar su precio de venta. Compras solo es necesaria para *registrar una entrada de mercancía* (mueve stock y recalcula el costo promedio), no para poder editar un precio.
+- **Ventas**: pedidos con múltiples productos. Al registrar una venta se descuenta del stock cada insumo de la receta (cantidad × (1 + % merma) × unidades). Recibo en PDF y estado del pedido por WhatsApp.
+- **Cotizaciones**: PDF ad-hoc (cliente + productos) sin registrar una venta.
+- **Producción**: kanban (Por Diseñar → Imprimiendo → Listo/Entregado) con drag & drop. Adjuntos por pedido: imágenes (guardadas en la PC) o enlaces a Drive.
+- **Productos y Precios**: CRUD con receta (insumos + cantidad + % de merma), costo de producción, margen % y ganancia neta.
+- **Inventario**: CRUD de insumos, alertas por stock mínimo/crítico, filtro por categoría. Costo y stock editables a mano.
+- **Compras**: facturas de proveedor; suman stock y recalculan el costo unitario promedio ponderado del insumo.
+- **Clientes (CRM)**: directorio, WhatsApp directo, fechas especiales, historial de compras y ranking.
+- **Reportes**: ingresos vs gastos (6 meses), productos más vendidos, top clientes.
 
-## Configurar Supabase (una sola vez)
+No hay login: el programa solo escucha en `127.0.0.1` (nadie fuera de esa PC puede entrar). Quien usa la PC tiene acceso total.
 
-1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Ve a **SQL Editor** y ejecuta completo el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas, las políticas RLS y las funciones `registrar_venta` / `registrar_compra`.
-3. Ve a **Authentication → Users** y crea manualmente los 2 usuarios administradores (email + contraseña). No hay flujo de registro público, por diseño.
-4. Ve a **Settings → API** y copia:
-   - `Project URL`
-   - `anon public` key (es segura de exponer en el cliente: el acceso real lo controla RLS, no esta key).
+## Instalar en la PC del negocio
 
-## Desarrollo local
+1. En GitHub, pestaña **Actions → "Compilar SubliApp para Windows"**, abre la última ejecución exitosa y descarga el artifact **SubliApp-windows** (un .zip).
+   - Para generar una nueva: botón **Run workflow**. También se ejecuta solo cada vez que se hace push de cambios al código.
+   - Alternativa sin GitHub: en una PC Windows con Python instalado, doble clic en `build_windows.bat` → queda en `dist\SubliApp\`.
+2. Descomprime la carpeta en un lugar fijo, p. ej. `C:\SubliApp\` (no en "Descargas" ni en "Archivos de programa").
+3. Crea un acceso directo de `SubliApp.exe` en el escritorio.
+
+El uso diario, respaldos y restauración están explicados para el usuario final en [`LEEME.txt`](LEEME.txt) (viene dentro del .zip).
+
+### Actualizar a una versión nueva
+
+Descarga el .zip nuevo y reemplaza todo **excepto** la carpeta `SubliApp_datos`. Los datos no se tocan.
+
+## Desarrollo
+
+Requiere Python 3.10+.
 
 ```bash
-cp js/config.example.js js/config.js
-# edita js/config.js con tu Project URL y anon key
-python3 -m http.server 8080
-# abre http://localhost:8080
+python -m venv .venv
 ```
 
-`js/config.js` está en `.gitignore` — nunca se commitea.
+```bash
+.venv/bin/pip install -r requirements.txt
+```
 
-## Deploy en Vercel
+```bash
+.venv/bin/python SubliApp.py
+```
 
-1. Importa el repo en Vercel.
-2. En **Settings → Environment Variables** agrega:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-3. Vercel usa `vercel.json` (build command `npm run build`, output `.`). El build corre `scripts/build-config.js`, que genera `js/config.js` a partir de esas variables — así las credenciales nunca quedan en el repo y puedes tener valores distintos por entorno (preview/producción).
+Abre `http://127.0.0.1:8765`. En desarrollo los datos van a `datos/` (ignorada por git). Se puede cambiar con la variable de entorno `SUBLIAPP_DATOS`.
 
-## Traspasar el sistema a alguien más (carga de datos reales)
-
-Cuando quieras entregarle la app a la persona que va a cargar el inventario real y armar las recetas:
-
-1. **Limpia los datos de prueba.** En el SQL Editor de Supabase, ejecuta [`supabase/reset_datos_prueba.sql`](supabase/reset_datos_prueba.sql). Borra todos los insumos/productos/clientes/ventas/compras de prueba y reinicia los folios a 1 — pero no toca la estructura de tablas, las políticas, ni los usuarios. Es irreversible, léelo antes de correrlo.
-   - Si subiste imágenes de prueba como adjuntos, bórralas aparte en **Storage → adjuntos** (el SQL no toca archivos, solo filas).
-2. **Crea su acceso.** En **Authentication → Users → Add user**, dale su email + contraseña (marca "Auto Confirm User"). Tendrá el mismo acceso total que los demás administradores — no hay roles restringidos en este sistema.
-3. **Pásale la URL de Vercel** y sus credenciales de acceso.
-
-Orden recomendado para cargar datos desde cero (el sistema no lo obliga, pero evita ir y viniendo):
-
-1. **Inventario** → crear todos los insumos (tinta, papel, tazas en blanco, franelas, etc.) con su costo unitario y stock inicial real.
-2. **Prod. y Precios** → crear cada producto final, armar su receta seleccionando los insumos ya cargados (cantidad + % de merma) y fijar el precio de venta. El costo, margen % y ganancia neta se calculan solos.
-3. **Clientes** (opcional en esta etapa) → cargar el directorio si ya lo tienen.
-4. A partir de ahí, **Ventas**, **Compras**, **Producción** y **Reportes** ya funcionan solos con datos reales — no requieren configuración adicional.
+Opciones del lanzador: `--sin-navegador` (no abre el navegador) y `--borrar-datos` (vacía la base, pide confirmación y guarda copia antes).
 
 ## Arquitectura
 
-- `supabase/schema.sql` — tablas, RLS y funciones de negocio (descuento de stock al vender, costo promedio ponderado al comprar) ejecutadas atómicamente en la base de datos.
-- `js/supabaseClient.js` — inicializa el cliente de Supabase a partir de `window.__SUPABASE_CONFIG__`.
-- `js/store.js` — capa de datos: lee/escribe en Supabase y mantiene una caché local en memoria para que el resto de la app renderice de forma síncrona. Cálculos de costo/margen/ganancia son puro JS sobre esa caché.
-- `js/modal.js` — modal genérico reutilizable para formularios; deshabilita el botón de guardar mientras la operación está en curso (evita duplicados por doble clic).
-- `js/pdf.js` — generación de recibos y cotizaciones en PDF (jsPDF). Edita `NEGOCIO_NOMBRE` / `NEGOCIO_CONTACTO` en este archivo con los datos reales del negocio.
-- `js/imageUtils.js` — comprime imágenes en el navegador antes de subirlas a Storage (máx. 1600px, JPEG calidad 80%, rechaza archivos de más de 8MB).
-- `js/app.js` — autenticación (login/logout), sidebar responsive con menú hamburguesa en móvil, búsqueda + paginación (8 filas) en Ventas/Productos/Inventario/Compras/Clientes, renderizado de vistas y wiring de eventos.
-- `scripts/build-config.js` — genera `js/config.js` desde variables de entorno en el build de Vercel.
-- `supabase/migrations/` — cambios incrementales de esquema para aplicar sobre un proyecto Supabase ya provisionado (ejecutar en orden, una sola vez cada uno).
+```
+SubliApp.py           Lanzador: respaldo diario, levanta el servidor y abre el navegador.
+backend/
+  base_datos.py       SQLite: esquema, lectura completa y todas las escrituras.
+                      registrar_venta / registrar_compra corren en una transacción.
+  api.py              Flask: sirve la interfaz y la API JSON en /api/...
+index.html, css/, js/ Interfaz (HTML + Tailwind + JS vanilla con módulos ES).
+  js/store.js         Capa de datos del frontend: llama a /api/... y mantiene una
+                      caché en memoria; costos/márgenes se calculan aquí en JS.
+  js/app.js           Vistas, modales y eventos.
+  js/pdf.js           Recibos y cotizaciones (edita NEGOCIO_NOMBRE / NEGOCIO_CONTACTO).
+  js/imageUtils.js    Comprime imágenes antes de guardarlas (máx. 1600px, JPEG 80%).
+vendor/               Tailwind, jsPDF, FontAwesome y fuente Inter incluidos
+                      (por eso funciona sin internet).
+SubliApp.spec         Receta de PyInstaller (genera dist/SubliApp/SubliApp.exe).
+build_windows.bat     Compila el .exe en una PC Windows.
+.github/workflows/    Compila el .exe en GitHub Actions.
+```
 
-Las 3 fases del roadmap original están implementadas. Ideas futuras no contempladas en el roadmap: roles/permisos más allá de los 2 admins, notificaciones automáticas de stock bajo, integración con la API oficial de WhatsApp Business (hoy es click-to-chat vía `wa.me`, requiere abrir WhatsApp manualmente).
+Carpeta de datos (`SubliApp_datos/` junto al .exe):
+
+```
+subliapp.db           Base de datos
+adjuntos/<venta>/     Imágenes de diseño de cada pedido
+respaldos/            Copia diaria (últimas 30) + copias "antes_de_borrar_..."
+```
+
+### Agregar un campo nuevo (ejemplo)
+
+1. `backend/base_datos.py`: agrégalo al `CREATE TABLE` y a la tupla `CAMPOS_...` de esa tabla. Para una base ya existente, agrega también un `ALTER TABLE ... ADD COLUMN` en `BaseDatos.__init__` (protegido con `try/except sqlite3.OperationalError` por si ya existe).
+2. `js/app.js`: agrégalo al formulario del modal correspondiente.
+
+### Futuro: si el negocio crece
+
+Si más adelante se necesita usar desde varias PCs, la API ya está separada del frontend: basta con escuchar en la red local (`host='0.0.0.0'` en `SubliApp.py`) y agregar login, o migrar `base_datos.py` a Postgres. El frontend no cambia.

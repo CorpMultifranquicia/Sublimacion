@@ -1,5 +1,5 @@
 /**
- * pdf.js — Generación de recibos y cotizaciones en PDF (jsPDF, cargado por CDN).
+ * pdf.js — Generación de recibos y cotizaciones en PDF (jsPDF, incluido en vendor/).
  * Cambia NEGOCIO_NOMBRE / NEGOCIO_CONTACTO por los datos reales del negocio.
  */
 

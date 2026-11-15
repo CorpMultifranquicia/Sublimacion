@@ -1,6 +1,6 @@
 /**
  * imageUtils.js — Compresión de imágenes en el navegador antes de subirlas
- * (evita fotos de varios MB directo desde el celular en el bucket de Storage).
+ * (evita fotos de varios MB directo desde el celular en la carpeta de adjuntos).
  */
 
 const MAX_DIMENSION = 1600;

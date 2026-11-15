@@ -1,6 +1,5 @@
 import { Store } from './store.js';
 import { openModal, closeModal, confirmDialog } from './modal.js';
-import { supabase } from './supabaseClient.js';
 import { generarReciboPDF, generarCotizacionPDF } from './pdf.js';
 
 const fmt = (n) => `$${(n || 0).toFixed(2)}`;
@@ -1049,62 +1048,25 @@ document.getElementById('filtro-inventario').addEventListener('click', (e) => {
     if (btn) filtrarInventario(btn.dataset.cat);
 });
 
-// ---------------- Autenticación ----------------
-
-async function logout() {
-    await supabase.auth.signOut();
-}
+// ---------------- Arranque ----------------
 
 function showScreen(id) {
-    ['loading-screen', 'auth-screen', 'app-shell'].forEach(s => {
+    ['loading-screen', 'error-screen', 'app-shell'].forEach(s => {
         document.getElementById(s).classList.toggle('hidden', s !== id);
     });
 }
 
-async function onAuthenticated(session) {
-    document.getElementById('user-email').textContent = session.user.email;
+async function iniciar() {
+    showScreen('loading-screen');
     try {
         await Store.load();
         showScreen('app-shell');
         showTab('inicio');
     } catch (e) {
-        showScreen('auth-screen');
-        document.getElementById('login-error').textContent = 'No se pudo cargar la información: ' + (e?.message || e);
-        document.getElementById('login-error').classList.remove('hidden');
+        document.getElementById('error-detalle').textContent = e?.message || String(e);
+        showScreen('error-screen');
     }
 }
-
-document.getElementById('form-login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const errorEl = document.getElementById('login-error');
-    errorEl.classList.add('hidden');
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.classList.add('opacity-60', 'cursor-not-allowed');
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>Ingresando...`;
-    const { error } = await supabase.auth.signInWithPassword({
-        email: formData.get('email'),
-        password: formData.get('password'),
-    });
-    btn.disabled = false;
-    btn.classList.remove('opacity-60', 'cursor-not-allowed');
-    btn.innerHTML = originalHtml;
-    if (error) {
-        errorEl.textContent = error.message;
-        errorEl.classList.remove('hidden');
-    }
-});
-
-supabase.auth.onAuthStateChange((event, session) => {
-    if (session) {
-        showScreen('loading-screen');
-        onAuthenticated(session);
-    } else {
-        showScreen('auth-screen');
-    }
-});
 
 // ---------------- Bootstrap ----------------
 
@@ -1115,5 +1077,7 @@ window.App = {
     openClienteModal, eliminarCliente, openClienteDetalle, enviarFelicitacion,
     openVentaModal, cambiarEstadoVenta, eliminarVenta, openAdjuntosModal,
     descargarRecibo, enviarEstadoWhatsApp, openCotizacionModal,
-    addItemCompra, logout,
+    addItemCompra, iniciar,
 };
+
+iniciar();

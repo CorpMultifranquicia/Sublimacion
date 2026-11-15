@@ -1,11 +1,9 @@
 /**
- * store.js — Capa de datos de SubliApp, respaldada por Supabase (Postgres + RLS).
- * Mantiene una caché local en memoria (`state`) para que el resto de la app
- * (render.js/app.js) siga leyendo de forma síncrona; toda escritura confirma
- * contra Supabase primero y luego refresca la caché.
+ * store.js — Capa de datos de SubliApp, respaldada por el servidor local (Python + SQLite).
+ * Mantiene una caché en memoria (`state`) para que app.js lea de forma síncrona;
+ * toda escritura se confirma contra la API local (/api/...) y luego refresca la caché.
  */
 
-import { supabase } from './supabaseClient.js';
 import { compressImage } from './imageUtils.js';
 
 let state = {
@@ -16,67 +14,28 @@ let state = {
     compras: [],
 };
 
-async function load() {
-    const [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, adjuntosRes, comprasRes, comprasDetalleRes] = await Promise.all([
-        supabase.from('insumos').select('*').order('nombre'),
-        supabase.from('productos_finales').select('*').order('nombre'),
-        supabase.from('recetas_detalle').select('*'),
-        supabase.from('clientes').select('*').order('nombre'),
-        supabase.from('ventas').select('*').order('fecha', { ascending: false }),
-        supabase.from('ventas_detalle').select('*'),
-        supabase.from('venta_adjuntos').select('*').order('created_at'),
-        supabase.from('compras').select('*').order('fecha', { ascending: false }),
-        supabase.from('compras_detalle').select('*'),
-    ]);
-
-    const firstError = [insumosRes, productosRes, recetasRes, clientesRes, ventasRes, ventasDetalleRes, adjuntosRes, comprasRes, comprasDetalleRes]
-        .map(r => r.error).find(Boolean);
-    if (firstError) throw firstError;
-
-    state.insumos = insumosRes.data.map(i => ({
-        ...i,
-        costo_unitario: Number(i.costo_unitario),
-        stock_actual: Number(i.stock_actual),
-        stock_minimo: Number(i.stock_minimo),
-    }));
-    state.clientes = clientesRes.data;
-
-    state.productos = productosRes.data.map(p => ({
-        ...p,
-        precio_venta: Number(p.precio_venta),
-        receta: recetasRes.data
-            .filter(r => r.producto_id === p.id)
-            .map(r => ({ insumo_id: r.insumo_id, cantidad: Number(r.cantidad_usada), merma_pct: Number(r.porcentaje_merma) })),
-    }));
-
-    state.ventas = ventasRes.data.map(v => ({
-        id: v.id,
-        folio: v.folio,
-        cliente_id: v.cliente_id,
-        fecha: v.fecha,
-        estado: v.estado_produccion,
-        detalle: ventasDetalleRes.data
-            .filter(d => d.venta_id === v.id)
-            .map(d => ({ producto_id: d.producto_id, cantidad: Number(d.cantidad), precio_unitario: Number(d.precio_unitario) })),
-        adjuntos: adjuntosRes.data
-            .filter(a => a.venta_id === v.id)
-            .map(a => ({ id: a.id, tipo: a.tipo, url: a.url, nombre: a.nombre })),
-    }));
-
-    state.compras = comprasRes.data.map(c => ({
-        id: c.id,
-        folio: c.folio,
-        proveedor: c.proveedor,
-        fecha: c.fecha,
-        items: comprasDetalleRes.data
-            .filter(i => i.compra_id === c.id)
-            .map(i => ({ insumo_id: i.insumo_id, cantidad: Number(i.cantidad), costo_unitario: Number(i.costo_unitario) })),
-    }));
+/** Llama a la API local y lanza un Error con el mensaje del servidor si algo falla. */
+async function api(metodo, ruta, datos) {
+    const opciones = { method: metodo };
+    if (datos instanceof FormData) {
+        opciones.body = datos;
+    } else if (datos !== undefined) {
+        opciones.headers = { 'Content-Type': 'application/json' };
+        opciones.body = JSON.stringify(datos);
+    }
+    let res;
+    try {
+        res = await fetch(ruta, opciones);
+    } catch {
+        throw new Error('No hay conexión con SubliApp. ¿Se cerró la ventana del programa?');
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
+    return json;
 }
 
-function must(res) {
-    if (res.error) throw res.error;
-    return res.data;
+async function load() {
+    state = await api('GET', '/api/estado');
 }
 
 // ---------- Cálculos financieros (puro JS, sin red) ----------
@@ -111,62 +70,51 @@ function estadoStock(insumo) {
 // ---------- Insumos ----------
 
 async function addInsumo(data) {
-    must(await supabase.from('insumos').insert(data));
+    await api('POST', '/api/insumos', data);
     await load();
 }
 
 async function updateInsumo(id, data) {
-    must(await supabase.from('insumos').update(data).eq('id', id));
+    await api('PUT', `/api/insumos/${id}`, data);
     await load();
 }
 
 async function deleteInsumo(id) {
-    must(await supabase.from('insumos').delete().eq('id', id));
+    await api('DELETE', `/api/insumos/${id}`);
     await load();
 }
 
 // ---------- Productos ----------
 
-async function addProducto({ receta, ...data }) {
-    const producto = must(await supabase.from('productos_finales').insert(data).select().single());
-    if (receta.length) {
-        must(await supabase.from('recetas_detalle').insert(
-            receta.map(r => ({ producto_id: producto.id, insumo_id: r.insumo_id, cantidad_usada: r.cantidad, porcentaje_merma: r.merma_pct }))
-        ));
-    }
+async function addProducto(data) {
+    await api('POST', '/api/productos', data);
     await load();
 }
 
-async function updateProducto(id, { receta, ...data }) {
-    must(await supabase.from('productos_finales').update(data).eq('id', id));
-    must(await supabase.from('recetas_detalle').delete().eq('producto_id', id));
-    if (receta.length) {
-        must(await supabase.from('recetas_detalle').insert(
-            receta.map(r => ({ producto_id: id, insumo_id: r.insumo_id, cantidad_usada: r.cantidad, porcentaje_merma: r.merma_pct }))
-        ));
-    }
+async function updateProducto(id, data) {
+    await api('PUT', `/api/productos/${id}`, data);
     await load();
 }
 
 async function deleteProducto(id) {
-    must(await supabase.from('productos_finales').delete().eq('id', id));
+    await api('DELETE', `/api/productos/${id}`);
     await load();
 }
 
 // ---------- Clientes ----------
 
 async function addCliente(data) {
-    must(await supabase.from('clientes').insert(data));
+    await api('POST', '/api/clientes', data);
     await load();
 }
 
 async function updateCliente(id, data) {
-    must(await supabase.from('clientes').update(data).eq('id', id));
+    await api('PUT', `/api/clientes/${id}`, data);
     await load();
 }
 
 async function deleteCliente(id) {
-    must(await supabase.from('clientes').delete().eq('id', id));
+    await api('DELETE', `/api/clientes/${id}`);
     await load();
 }
 
@@ -185,57 +133,45 @@ function montoVenta(venta) {
 }
 
 async function addVenta({ cliente_id, fecha, detalle, estado }) {
-    const { error } = await supabase.rpc('registrar_venta', {
-        p_cliente_id: cliente_id,
-        p_fecha: fecha,
-        p_estado: estado || 'Por Diseñar',
-        p_detalle: detalle,
-    });
-    if (error) throw error;
+    await api('POST', '/api/ventas', { cliente_id, fecha, detalle, estado: estado || 'Por Diseñar' });
     await load();
 }
 
 async function updateEstadoVenta(id, estado) {
-    must(await supabase.from('ventas').update({ estado_produccion: estado }).eq('id', id));
+    await api('PUT', `/api/ventas/${id}/estado`, { estado });
     await load();
 }
 
 async function deleteVenta(id) {
-    must(await supabase.from('ventas').delete().eq('id', id));
+    await api('DELETE', `/api/ventas/${id}`);
     await load();
 }
 
 // ---------- Adjuntos de producción ----------
 
 async function addAdjuntoEnlace(ventaId, url, nombre) {
-    must(await supabase.from('venta_adjuntos').insert({ venta_id: ventaId, tipo: 'enlace', url, nombre }));
+    await api('POST', `/api/ventas/${ventaId}/adjuntos/enlace`, { url, nombre });
     await load();
 }
 
 async function addAdjuntoImagen(ventaId, file) {
     const comprimido = await compressImage(file);
-    const path = `${ventaId}/${crypto.randomUUID()}-${comprimido.name}`;
-    const upload = await supabase.storage.from('adjuntos').upload(path, comprimido);
-    if (upload.error) throw upload.error;
-    const { data: { publicUrl } } = supabase.storage.from('adjuntos').getPublicUrl(path);
-    must(await supabase.from('venta_adjuntos').insert({ venta_id: ventaId, tipo: 'imagen', url: publicUrl, nombre: file.name }));
+    const form = new FormData();
+    form.append('archivo', comprimido);
+    form.append('nombre', file.name);
+    await api('POST', `/api/ventas/${ventaId}/adjuntos/imagen`, form);
     await load();
 }
 
 async function deleteAdjunto(id) {
-    must(await supabase.from('venta_adjuntos').delete().eq('id', id));
+    await api('DELETE', `/api/adjuntos/${id}`);
     await load();
 }
 
 // ---------- Compras ----------
 
 async function addCompra({ proveedor, fecha, items }) {
-    const { error } = await supabase.rpc('registrar_compra', {
-        p_proveedor: proveedor,
-        p_fecha: fecha,
-        p_items: items,
-    });
-    if (error) throw error;
+    await api('POST', '/api/compras', { proveedor, fecha, items });
     await load();
 }
 
