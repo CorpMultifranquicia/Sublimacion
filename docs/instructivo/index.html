@@ -217,7 +217,7 @@
 </svg>
 </div>
 <ol class="pasos">
-    <li><b>Configuración:</b> revisa el nombre del negocio, RIF, teléfono y sube el logo. Esto aparece en los recibos y presupuestos. <i>(Capítulo 5)</i></li>
+    <li><b>Configuración:</b> revisa el nombre del negocio, RIF, teléfono y dirección (el logo ya viene cargado). Esto aparece en los recibos y presupuestos. <i>(Capítulo 5)</i></li>
     <li><b>Tasa del día:</b> carga cuántos bolívares vale el dólar hoy. <i>(Capítulo 6)</i></li>
     <li><b>Inventario:</b> registra cada material: tazas en blanco, franelas, gorras, papel, tinta, cinta… con lo que cuesta y cuánto tienes. <i>(Capítulo 7)</i></li>
     <li><b>Productos:</b> crea lo que vendes (por ejemplo “Taza personalizada”) e indica qué materiales lleva cada uno. El programa calcula el costo y la ganancia. <i>(Capítulo 8)</i></li>
@@ -231,7 +231,7 @@
 <figure><img src="img/03_configuracion.png" alt="Configuración: datos del negocio"><figcaption>Datos del negocio y respaldo</figcaption></figure>
 <ul class="marcas">
     <li><span class="m">1</span><b>Datos del negocio:</b> nombre comercial, eslogan, RIF, teléfono, email, redes y dirección. Salen en el encabezado de recibos y cotizaciones.</li>
-    <li><span class="m">2</span><b>Subir logo:</b> elige la imagen del logo (mejor en PNG con fondo transparente). Aparece en el menú y en los PDF. Se guarda al instante.</li>
+    <li><span class="m">2</span><b>Logo:</b> el logo de Zafiro Lab viene cargado de fábrica y aparece en el menú y en los PDF. Con <b>Cambiar logo</b> puedes poner otra imagen (mejor en PNG con fondo transparente); <b>Quitar logo</b> lo elimina y <b>Restaurar logo de Zafiro Lab</b> lo recupera.</li>
     <li><span class="m">3</span><b>Descargar respaldo:</b> guarda una copia de toda la información (ver capítulo 19).</li>
 </ul>
 <figure><img src="img/04_configuracion_preferencias.png" alt="Configuración: preferencias"><figcaption>Preferencias, bolívares y vista previa de documentos</figcaption></figure>
@@ -630,7 +630,14 @@
 <h3>Pasar SubliApp a otra computadora</h3>
 <p>Copia la carpeta completa del programa (con <b>SubliApp_datos</b> adentro) a la nueva PC y crea el acceso directo de <b>SubliApp.exe</b>. Todo seguirá igual.</p>
 <h3>Instalar una versión nueva del programa</h3>
-<p>Reemplaza todos los archivos de la carpeta del programa <b>excepto la carpeta SubliApp_datos</b>. Al abrir la nueva versión, tus datos se actualizan solos (antes se guarda una copia por seguridad).</p>
+<p>Tus productos, ventas, clientes e inventario <b>no se pierden</b> al actualizar: viven en la carpeta <b>SubliApp_datos</b>, que la actualización no toca.</p>
+<ol class="pasos">
+    <li><b>Descarga un respaldo</b> (Configuración → Descargar respaldo). Es solo por precaución.</li>
+    <li>Cierra SubliApp (navegador y ventana negra).</li>
+    <li>Descomprime el .zip nuevo y copia su contenido <b>dentro de la misma carpeta del programa</b> (por ejemplo <b>C:\SubliApp</b>), aceptando reemplazar los archivos. <b>No borres ni reemplaces la carpeta SubliApp_datos.</b></li>
+    <li>Abre SubliApp. Si la nueva versión trae cambios en la base de datos, se aplican solos y antes se guarda una copia en <b>respaldos</b> (archivo “antes_de_migrar_…”).</li>
+</ol>
+<div class="caja importante"><b>Ojo con la carpeta.</b> Si descomprimes la versión nueva en <b>otra</b> carpeta y la abres desde ahí, verás el programa vacío: tus datos siguen intactos en la carpeta anterior. Cierra el programa y copia la carpeta <b>SubliApp_datos</b> vieja junto al nuevo SubliApp.exe.</div>
 <h3>Empezar de cero</h3>
 <p>Para borrar todos los datos (por ejemplo después de practicar), haz doble clic en <b>Borrar datos.bat</b> y escribe <b>BORRAR</b>. Antes de borrar se guarda una copia en la carpeta de respaldos. La configuración del negocio se conserva.</p>
 <div class="caja importante">Solo la PC donde está instalado SubliApp puede abrirlo; nadie más en la red ni en internet tiene acceso. Aun así, no dejes la PC sin contraseña de Windows.</div>

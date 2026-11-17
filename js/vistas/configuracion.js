@@ -62,7 +62,8 @@ function render(el) {
                         <label class="inline-block px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">
                             <i class="fa-solid fa-upload mr-1"></i>${logo ? 'Cambiar logo' : 'Subir logo'}<input id="cfg-logo" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
                         </label>
-                        ${logo ? '<button type="button" id="cfg-quitar-logo" class="block text-xs text-rose-500 hover:underline">Quitar logo</button>' : ''}
+                        ${logo ? '<button type="button" id="cfg-quitar-logo" class="block text-xs text-rose-500 hover:underline">Quitar logo</button>'
+                               : '<button type="button" id="cfg-restaurar-logo" class="block text-xs text-indigo-600 hover:underline">Restaurar logo de Zafiro Lab</button>'}
                         <p class="text-xs text-slate-400">PNG con fondo transparente se ve mejor. Se usa en el menú y en los PDF.</p>
                     </div>
                 </div>
@@ -143,6 +144,9 @@ function render(el) {
             refrescar();
             toast('Logo actualizado.');
         } catch (err) { handleError(err); }
+    });
+    el.querySelector('#cfg-restaurar-logo')?.addEventListener('click', async () => {
+        try { await Store.guardarConfig({ ...datosFormulario(form), logo: null }); refrescar(); toast('Logo de Zafiro Lab restaurado.'); } catch (err) { handleError(err); }
     });
     el.querySelector('#cfg-quitar-logo')?.addEventListener('click', async () => {
         try { await Store.guardarConfig({ ...datosFormulario(form), logo: '' }); refrescar(); toast('Logo quitado.'); } catch (err) { handleError(err); }

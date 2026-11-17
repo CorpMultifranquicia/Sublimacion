@@ -10,6 +10,7 @@ a = Analysis(
         ('css', 'css'),
         ('js', 'js'),
         ('vendor', 'vendor'),
+        ('backend/logo_predeterminado.png', 'backend'),
         ('docs/instructivo/index.html', 'docs/instructivo'),
         ('docs/instructivo/img', 'docs/instructivo/img'),
         ('docs/Instructivo_SubliApp.pdf', 'docs'),

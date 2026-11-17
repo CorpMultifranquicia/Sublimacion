@@ -42,6 +42,17 @@ RESTAURAR UN RESPALDO
      (reemplazando el actual).
   3. Abre SubliApp de nuevo.
 
+ACTUALIZAR A UNA VERSIÓN NUEVA (tus datos no se pierden)
+  1. Descarga un respaldo (Configuración > Descargar respaldo), por precaución.
+  2. Cierra SubliApp (navegador y ventana negra).
+  3. Copia el contenido del .zip nuevo DENTRO de esta misma carpeta y acepta
+     reemplazar los archivos. NO borres la carpeta SubliApp_datos.
+  4. Abre SubliApp. Si hay cambios en la base de datos se aplican solos, y
+     antes se guarda una copia en respaldos\ ("antes_de_migrar_...").
+  Si abres la versión nueva desde OTRA carpeta verás el programa vacío: tus
+  datos siguen en la carpeta anterior. Copia esa SubliApp_datos junto al nuevo
+  SubliApp.exe.
+
 PASAR A OTRA PC
   Copia la carpeta completa de SubliApp (con SubliApp_datos adentro) a la otra PC.
 

@@ -66,7 +66,10 @@ jobs:
       - name: Empaquetar .zip
         if: github.ref == 'refs/heads/main'
         shell: pwsh
-        run: Compress-Archive -Path dist/SubliApp -DestinationPath SubliApp-windows.zip
+        run: |
+          # Seguridad: el paquete jamás debe traer datos, o pisaría los del negocio al actualizar.
+          if (Test-Path dist/SubliApp/SubliApp_datos) { throw 'El paquete contiene SubliApp_datos: no se publica.' }
+          Compress-Archive -Path dist/SubliApp -DestinationPath SubliApp-windows.zip
 
       - name: Publicar versión
         if: github.ref == 'refs/heads/main'

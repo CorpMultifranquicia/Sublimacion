@@ -16,6 +16,7 @@ Reglas de negocio importantes:
     que esa operación generó.
 """
 
+import base64
 import shutil
 import sqlite3
 import uuid
@@ -43,7 +44,7 @@ CONFIG_DEFECTO = {
     'negocio_direccion': '',
     'negocio_email': '',
     'negocio_redes': '',
-    'logo': '',                      # imagen como data URL (se comprime en el navegador)
+    'logo': '',                      # imagen como data URL; si nunca se configuró, se usa LOGO_PREDETERMINADO
     'moneda': '$',
     'margen_objetivo': '50',         # % sobre el precio de venta
     'cotizacion_validez_dias': '15',
@@ -59,6 +60,18 @@ CONFIG_DEFECTO = {
 }
 
 MONEDAS_PAGO = ('USD', 'VES')
+
+# Logo de Zafiro Lab que trae el programa de fábrica (backend/logo_predeterminado.png).
+_RUTA_LOGO = Path(__file__).with_name('logo_predeterminado.png')
+_logo_cache = None
+
+
+def logo_predeterminado():
+    global _logo_cache
+    if _logo_cache is None:
+        _logo_cache = ('data:image/png;base64,' + base64.b64encode(_RUTA_LOGO.read_bytes()).decode()
+                       if _RUTA_LOGO.exists() else '')
+    return _logo_cache
 
 
 class ErrorDeDatos(ValueError):
@@ -149,7 +162,11 @@ class BaseDatos:
     def config(self, con=None):
         def leer(c):
             guardado = {r['clave']: r['valor'] for r in c.execute('SELECT clave, valor FROM configuracion')}
-            return {k: guardado.get(k, v) for k, v in CONFIG_DEFECTO.items()}
+            config = {k: guardado.get(k, v) for k, v in CONFIG_DEFECTO.items()}
+            # Logo: si nunca se eligió uno, va el de fábrica. Si el usuario lo quitó, queda vacío ('').
+            if 'logo' not in guardado:
+                config['logo'] = logo_predeterminado()
+            return config
         if con is not None:
             return leer(con)
         with self.conexion() as c:
@@ -159,6 +176,10 @@ class BaseDatos:
         with self.conexion() as con:
             for clave, valor in datos.items():
                 if clave not in CONFIG_DEFECTO:
+                    continue
+                if valor is None:
+                    # null = volver al valor de fábrica (p. ej. restaurar el logo predeterminado)
+                    con.execute('DELETE FROM configuracion WHERE clave = ?', (clave,))
                     continue
                 con.execute('INSERT INTO configuracion (clave, valor) VALUES (?, ?) '
                             'ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor',
