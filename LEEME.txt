@@ -60,9 +60,21 @@ EMPEZAR DE CERO
   Doble clic en "Borrar datos.bat" y escribe BORRAR. Antes de borrar se guarda
   una copia en SubliApp_datos\respaldos\ (archivo "antes_de_borrar_...").
 
-SI WINDOWS MUESTRA "WINDOWS PROTEGIÓ SU PC"
-  Es normal en programas sin firma digital. Clic en "Más información" >
-  "Ejecutar de todas formas". Solo pasa la primera vez.
+SI WINDOWS MUESTRA ALERTAS
+  SubliApp no tiene una firma digital comprada, por eso Windows desconfía la
+  primera vez. No tiene virus: se compila desde su código y se revisa con el
+  antivirus de Microsoft antes de publicarse.
+  - ANTES de descomprimir el .zip: clic derecho > Propiedades > marcar
+    "Desbloquear" > Aceptar. Esto evita la mayoría de los avisos.
+  - "Windows protegió su PC" (azul): "Más información" > "Ejecutar de todas
+    formas". Para que no vuelva: clic derecho en SubliApp.exe > Propiedades >
+    "Desbloquear".
+  - El antivirus dice "Amenaza encontrada" o borra el programa (falsa alarma):
+    Seguridad de Windows > Protección contra virus y amenazas > Historial de
+    protección > elegir el aviso > Acciones > "Permitir en el dispositivo".
+    Luego: Administrar la configuración > Exclusiones > Agregar una exclusión
+    > Carpeta > C:\SubliApp  (solo esa carpeta).
+  - Firewall "¿Permitir acceso?": no debería salir; si sale, "Cancelar".
 
 DOCUMENTOS
   Los recibos y cotizaciones son documentos NO fiscales. Si un cliente necesita

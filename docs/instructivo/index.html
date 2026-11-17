@@ -164,8 +164,23 @@
 </ol>
 <div class="caja importante"><b>No cierres la ventana negra mientras trabajas.</b> Puedes minimizarla (botón <b>—</b> de la esquina), pero si la cierras SubliApp se apaga y el navegador mostrará “No se pudo cargar la información”.</div>
 <div class="caja consejo"><b>¿Cerraste el navegador por error?</b> No pasa nada: vuelve a hacer doble clic en SubliApp, o escribe <b>127.0.0.1:8765</b> en la barra del navegador. Todo lo que guardaste sigue ahí.</div>
-<h3>La primera vez en una PC nueva</h3>
-<p>Windows puede mostrar un aviso azul: <b>“Windows protegió su PC”</b>. Es normal en programas hechos a medida. Haz clic en <b>Más información</b> y luego en <b>Ejecutar de todas formas</b>. Solo ocurre la primera vez.</p>
+<h3>Instalar sin alertas de Windows</h3>
+<p>SubliApp es un programa hecho a medida y no tiene una firma digital comprada, por eso Windows desconfía de él la primera vez. <b>No significa que tenga virus</b>: el programa se compila automáticamente desde su código y se revisa con el antivirus de Microsoft antes de publicarse. Para evitar la mayoría de los avisos, <b>desbloquea el .zip antes de descomprimirlo</b>:</p>
+<ol class="pasos">
+    <li>Haz <b>clic derecho</b> sobre el archivo descargado <b>SubliApp-windows.zip</b> y elige <b>Propiedades</b>.</li>
+    <li>En la pestaña <b>General</b>, abajo, marca la casilla <b>Desbloquear</b> y presiona <span class="boton">Aceptar</span>. (Si no aparece esa casilla, el archivo ya está desbloqueado.)</li>
+    <li>Ahora sí: clic derecho → <b>Extraer todo…</b> → elige <b>C:\</b> como destino. Quedará la carpeta <b>C:\SubliApp</b>.</li>
+    <li>Entra a C:\SubliApp, clic derecho en <b>SubliApp.exe</b> → <b>Enviar a</b> → <b>Escritorio (crear acceso directo)</b>.</li>
+</ol>
+<p>Repite el paso de desbloquear cada vez que descargues una versión nueva.</p>
+<h3>Si aun así aparece una alerta</h3>
+<table>
+    <tr><th style="width:34%">Alerta</th><th>Qué hacer</th></tr>
+    <tr><td>Recuadro azul <b>“Windows protegió su PC”</b></td><td>Haz clic en <b>Más información</b> y luego en <b>Ejecutar de todas formas</b>. Para que no vuelva a salir: clic derecho en SubliApp.exe → Propiedades → marca <b>Desbloquear</b> → Aceptar.</td></tr>
+    <tr><td>Aviso del antivirus: <b>“Amenaza encontrada”</b> o el programa desaparece de la carpeta</td><td>Es una falsa alarma frecuente en programas hechos en Python. Abre <b>Seguridad de Windows</b> → <b>Protección contra virus y amenazas</b> → <b>Historial de protección</b>, elige el aviso de SubliApp → <b>Acciones</b> → <b>Permitir en el dispositivo</b> (o <b>Restaurar</b>). Para que no se repita: en <b>Protección contra virus y amenazas</b> → <b>Administrar la configuración</b> → <b>Exclusiones</b> → <b>Agregar una exclusión</b> → <b>Carpeta</b> → elige <b>C:\SubliApp</b>. Si usas otro antivirus, busca la opción “excluir carpeta” o “lista blanca”.</td></tr>
+    <tr><td>Firewall: <b>“¿Permitir acceso?”</b></td><td>No debería aparecer, porque SubliApp solo funciona dentro de esta PC. Si aparece, puedes elegir <b>Cancelar</b>: el programa funciona igual.</td></tr>
+</table>
+<div class="caja importante">Excluye del antivirus <b>solo</b> la carpeta C:\SubliApp, nunca todo el disco ni la carpeta Descargas.</div>
 <h3>Cerrar SubliApp</h3>
 <p>Al terminar el día cierra el navegador y luego la ventana negra. Todo se guarda automáticamente en el momento en que presionas cada botón <span class="boton">Guardar</span>: no hay un “guardar” general.</p>
 <h3>¿No necesita internet?</h3>

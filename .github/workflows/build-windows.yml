@@ -32,12 +32,37 @@ jobs:
           python-version: '3.12'
 
       - name: Instalar dependencias
+        shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          pip install -r requirements.txt
+          # PyInstaller con su cargador compilado aquí mismo (no el genérico que traen
+          # miles de programas): reduce mucho las falsas alarmas de los antivirus.
+          $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
+          pip install --no-binary pyinstaller "pyinstaller==6.22.3"
 
       - name: Compilar ejecutable
+        env:
+          SUBLIAPP_VERSION: 2.${{ github.run_number }}
         run: pyinstaller --noconfirm SubliApp.spec
+
+      - name: Revisar datos del ejecutable
+        shell: pwsh
+        run: |
+          $info = (Get-Item dist/SubliApp/SubliApp.exe).VersionInfo
+          "Editor: $($info.CompanyName) · Producto: $($info.ProductName) · Versión: $($info.FileVersion)"
+          if ($info.CompanyName -ne 'Zafiro Lab') { throw 'El .exe no tiene los datos de versión.' }
+
+      - name: Escanear con Microsoft Defender
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $mp = Join-Path $env:ProgramFiles 'Windows Defender\MpCmdRun.exe'
+          & $mp -SignatureUpdate | Out-Host
+          & $mp -Scan -ScanType 3 -File (Resolve-Path dist/SubliApp) -DisableRemediation | Out-Host
+          if ($LASTEXITCODE -eq 2) { throw 'Defender detectó una amenaza (probable falso positivo): revisar antes de publicar.' }
+          "Defender: sin amenazas detectadas."
+
 
       - name: Agregar archivos de ayuda
         shell: pwsh
